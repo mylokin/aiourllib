@@ -19,7 +19,7 @@ async def read(connection):
 
 
 async def connect(url, loop=None):
-    pr = urllib.parse.urlspilt(url)
+    pr = urllib.parse.urlsplit(url)
     if pr.scheme == 'https':
         port, ssl = 443, True
     else:
