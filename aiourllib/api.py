@@ -39,7 +39,7 @@ async def get(url, loop=None):
     conn = await connect(url, loop=loop)
 
     pr = urllib.parse.urlsplit(url)
-    request = webob.Request.blank(pr.path, base_url=url)
+    request = webob.Request.blank(pr.path or '/', base_url=url)
     headers = '{}\r\n\r\n'.format(str(request)).encode('latin-1')
     conn.writer.write(headers)
 
