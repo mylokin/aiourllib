@@ -1,16 +1,10 @@
 import asyncio
-import collections
 import urllib.parse
 
 import webob
 
+from . import models
 from .response import Response
-
-Connection = collections.namedtuple('Connection', [
-    'url',
-    'reader',
-    'writer',
-])
 
 async def read(connection):
     response = Response(connection)
@@ -32,7 +26,7 @@ async def connect(url, loop=None):
         loop=loop,
     )
     reader, writer = await conn
-    return Connection(url, reader, writer)
+    return models.Connection(url, reader, writer)
 
 
 async def get(url, loop=None):
