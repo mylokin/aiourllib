@@ -1,1 +1,3 @@
-__init__.py
+__all__ = ['get']
+
+from .api import get
