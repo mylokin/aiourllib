@@ -1,10 +1,10 @@
 import asyncio
 import urllib.parse
 
-import webob
-
 from . import models
 from .response import Response
+from .request import Request
+
 
 async def read(connection):
     response = Response(connection)
@@ -32,9 +32,7 @@ async def connect(url, loop=None):
 async def get(url, loop=None):
     conn = await connect(url, loop=loop)
 
-    pr = urllib.parse.urlsplit(url)
-    request = webob.Request.blank(pr.path or '/', base_url=url)
-    headers = '{}\r\n\r\n'.format(str(request)).encode('latin-1')
-    conn.writer.write(headers)
+    request = str(Request('get', url)).encode('latin-1')
+    conn.writer.write(request)
 
     return (await read(conn))
