@@ -1,4 +1,3 @@
-
 class Request(object):
     CRLF = b'\r\n'
     SP = b' '

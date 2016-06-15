@@ -280,7 +280,7 @@ class URI(object):
     ]
     PROTOCOL = Protocol
 
-    def __init__(self, uri):
+    def parse(self, uri):
         self.scheme, scheme_specific_part = self.PROTOCOL.process_scheme(uri)
 
         self.fragment, scheme_specific_part = \
@@ -317,6 +317,8 @@ class URI(object):
             else:
                 # rel_path
                 self.__handle_rel_path(scheme_specific_part)
+
+        return self
 
     def __handle_rel_path(self, scheme_specific_part):
         self.query, scheme_specific_part = \
@@ -411,7 +413,7 @@ class URI(object):
 
 class TestURI(unittest.TestCase):
     def assertMatch(self, uri):
-        self.assertEqual(str(URI(uri)), uri)
+        self.assertEqual(str(URI().parse(uri)), uri)
 
     def test_net_path(self):
         self.assertMatch('http://a/b/c/d;p?q')
@@ -436,18 +438,18 @@ class TestURI(unittest.TestCase):
         self.assertMatch(source)
 
     def test_authority_value(self):
-        uri = URI('mongo://a:b@c:1/d/e')
+        uri = URI().parse('mongo://a:b@c:1/d/e')
         self.assertEqual(uri.authority, 'a:b@c:1')
 
     def test_rel_segment(self):
         self.assertMatch('a/b/c/')
 
     def test_rel_segment_value(self):
-        self.assertEqual(URI('a/b/c/').rel_segment, 'a')
+        self.assertEqual(URI().parse('a/b/c/').rel_segment, 'a')
 
     def test_fail_only_query(self):
         with self.assertRaises(RelSegmentException):
-            URI('?a')
+            URI().parse('?a')
 
 
 if __name__ == '__main__':

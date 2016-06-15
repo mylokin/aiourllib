@@ -1,7 +1,9 @@
 import collections
 
-from . import rfc2396
-
+from . import (
+    rfc2396,
+    rfc2161,
+)
 
 class Protocol(object):
     HTTP_VERSION = 1.1
