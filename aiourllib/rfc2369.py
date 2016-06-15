@@ -185,6 +185,7 @@ class URI(object):
                     self.fragment = fragment
                 else:
                     self.fragment = None
+
                 if '?' in scheme_specific_part:
                     scheme_specific_part, query = scheme_specific_part.rsplit('?', 1)
                     if any(c not in Protocol.URIC for c in query):
@@ -193,21 +194,9 @@ class URI(object):
                 else:
                     self.query = None
 
-                path = scheme_specific_part or '/'
-                if not path.startswith('/'):
-                    path = '/{}'.format(path)
+                self.path = self.parse_path(scheme_specific_part)
+                self.segments = self.parse_segments(self.path)
 
-                segments = path.strip('/').split('/')
-                for segment in segments:
-                    if not segment:
-                        continue
-                    if segment[0] not in Protocol.PCHAR:
-                        raise PathSegmentException(segment)
-                    if any(c not in self.SEGMENT for c in segment):
-                        raise PathSegmentException(segment)
-                self.segments = segments
-
-                self.path = path
             else:
                 self.path = '/'
                 self.segments = None
@@ -221,6 +210,25 @@ class URI(object):
             raise NotImplementedError(uri)
         else:
             raise URIException(uri)
+
+    @classmethod
+    def parse_path(cls, scheme_specific_part):
+        path = scheme_specific_part or '/'
+        if not path.startswith('/'):
+            path = '/{}'.format(path)
+        return path
+
+    @classmethod
+    def parse_segments(cls, path):
+        segments = path.strip('/').split('/')
+        for segment in segments:
+            if not segment:
+                continue
+            if segment[0] not in Protocol.PCHAR:
+                raise PathSegmentException(segment)
+            if any(c not in cls.SEGMENT for c in segment):
+                raise PathSegmentException(segment)
+        return segments
 
     def __str__(self):
         result = ''
@@ -240,7 +248,7 @@ class URI(object):
 def main():
     uri = URI('http://ya.ru/fads/fasd/./fasd#fasdfasd')
     print(uri)
-    print(URI('file:///tm{}p/test.py'))
+    print(URI('file:///tmp/test.py'))
 
 if __name__ == '__main__':
     main()
