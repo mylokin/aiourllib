@@ -298,27 +298,27 @@ class URI(object):
         if self.scheme:
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
-                self._handle_net_path(scheme_specific_part)
+                self.__handle_net_path(scheme_specific_part)
             elif scheme_specific_part.startswith('/'):
                 # hier_part(abs_path)
-                self._handle_abs_path(scheme_specific_part)
+                self.__handle_abs_path(scheme_specific_part)
             elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
                 # opaque_part
-                self._handle_opaque_part(scheme_specific_part)
+                self.__handle_opaque_part(scheme_specific_part)
             else:
                 raise URIException(uri)
         else:
             if scheme_specific_part.startswith('//'):
                 # net_path
-                self._handle_net_path(scheme_specific_part)
+                self.__handle_net_path(scheme_specific_part)
             elif scheme_specific_part.startswith('/'):
                 # abs_path
-                self._handle_abs_path(scheme_specific_part)
+                self.__handle_abs_path(scheme_specific_part)
             else:
                 # rel_path
-                self._handle_rel_path(scheme_specific_part)
+                self.__handle_rel_path(scheme_specific_part)
 
-    def _handle_rel_path(self, scheme_specific_part):
+    def __handle_rel_path(self, scheme_specific_part):
         self.query, scheme_specific_part = \
             self.PROTOCOL.process_query(scheme_specific_part)
 
@@ -332,7 +332,7 @@ class URI(object):
             self.abs_path = '/'
             self.segments = None
 
-    def _handle_net_path(self, scheme_specific_part):
+    def __handle_net_path(self, scheme_specific_part):
         scheme_specific_part = \
             self.PROTOCOL.process_net_path(scheme_specific_part)
         authority, scheme_specific_part = \
@@ -372,7 +372,7 @@ class URI(object):
 
         return scheme_specific_part
 
-    def _handle_abs_path(self, scheme_specific_part):
+    def __handle_abs_path(self, scheme_specific_part):
         self.query, scheme_specific_part = \
             self.PROTOCOL.process_query(scheme_specific_part)
 
@@ -385,7 +385,7 @@ class URI(object):
 
         return scheme_specific_part
 
-    def _handle_opaque_part(self, scheme_specific_part):
+    def __handle_opaque_part(self, scheme_specific_part):
         self.opaque_part, scheme_specific_part = \
             self.PROTOCOL.process_opaque_part(scheme_specific_part)
         return scheme_specific_part
