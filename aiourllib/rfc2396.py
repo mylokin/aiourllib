@@ -109,11 +109,10 @@ class URI(object):
                     self.process_fragment(scheme_specific_part)
                 self.query, scheme_specific_part = \
                     self.process_query(scheme_specific_part)
-                self.path = self.parse_path(scheme_specific_part)
-                self.segments = self.parse_segments(self.path)
-
+                self.abs_path = self.parse_abs_path(scheme_specific_part)
+                self.segments = self.parse_segments(self.abs_path)
             else:
-                self.path = '/'
+                self.abs_path = '/'
                 self.segments = None
                 self.fragment = self.query = None
 
@@ -243,15 +242,15 @@ class URI(object):
         return query, scheme_specific_part
 
     @classmethod
-    def parse_path(cls, scheme_specific_part):
-        path = scheme_specific_part or '/'
-        if not path.startswith('/'):
-            path = '/{}'.format(path)
-        return path
+    def parse_abs_path(cls, scheme_specific_part):
+        abs_path = scheme_specific_part or '/'
+        if not abs_path.startswith('/'):
+            abs_path = '/{}'.format(abs_path)
+        return abs_path
 
     @classmethod
-    def parse_segments(cls, path):
-        segments = path.strip('/').split('/')
+    def parse_segments(cls, abs_path):
+        segments = abs_path.strip('/').split('/')
         for segment in segments:
             if not segment:
                 continue
@@ -269,7 +268,7 @@ class URI(object):
             result = '{}//{}'.format(result, self.authority)
         else:
             result = '{}//'.format(result)
-        result = '{}{}'.format(result, self.path)
+        result = '{}{}'.format(result, self.abs_path)
         if self.query:
             result = '{}?{}'.format(result, self.query)
         if self.fragment:
