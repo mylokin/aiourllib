@@ -1,4 +1,5 @@
 import string
+import unittest
 
 
 class Protocol(object):
@@ -378,16 +379,32 @@ class URI(object):
         return result
 
 
-def main():
-    print(URI('http://ya.ru/fads/fasd/./fasd?fuu#fasdfasd'))
-    print(URI('file:///tmp/test.py'))
-    print(URI('/tmp/test.py'))
-    print(URI('tmp+fdf:///d/test.py?fasdfs'))
-    print(URI('http://a/b/c/d;p?q'))
-    print(URI('g./f/f/'))
-    print(URI('/../g'))
-    print(URI('?fasdf'))
+class TestURI(unittest.TestCase):
+    def assertMatch(self, uri):
+        self.assertEqual(str(URI(uri)), uri)
+
+    def test_net_path(self):
+        self.assertMatch('http://a/b/c/d;p?q')
+
+    def test_ending_slash(self):
+        self.assertMatch('http://a/b/c/g/')
+
+    def test_no_ending_slash(self):
+        self.assertMatch('http://a/b/c/g')
+
+    def test_file_scheme(self):
+        self.assertMatch('file:///tmp/test.py')
+
+    def test_extended_scheme(self):
+        self.assertMatch('tmp+fdf:///d/test.py?fasdfs')
+
+    def test_no_scheme(self):
+        self.assertMatch('/tmp/test.py')
+
+    def test_fail_only_query(self):
+        with self.assertRaises(RelSegmentException):
+            URI('?a')
 
 
 if __name__ == '__main__':
-    main()
+    unittest.main()
