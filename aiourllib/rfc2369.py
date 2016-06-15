@@ -134,6 +134,26 @@ class URI(object):
 
             self.host = host
 
+            if scheme_specific_part:
+                if '#' in scheme_specific_part:
+                    scheme_specific_part, fragment = scheme_specific_part.rsplit('#', 1)
+                    if any(c not in Protocol.URIC for c in fragment):
+                        raise ValueError(fragment)
+                    self.fragment = fragment
+                else:
+                    self.fragment = None
+                if '?' in scheme_specific_part:
+                    scheme_specific_part, query = scheme_specific_part.rsplit('?', 1)
+                    if any(c not in Protocol.URIC for c in query):
+                        raise ValueError(query)
+                    self.query = query
+                else:
+                    self.query = None
+                path = scheme_specific_part or '/'
+            else:
+                self.path = '/'
+                self.fragment = self.query = None
+
         elif scheme_specific_part.startswith('/'):
             # hier_part(abs_path)
             raise NotImplementedError(uri)
@@ -145,7 +165,7 @@ class URI(object):
 
 
 def main():
-    uri = URI('http://ya.ru/')
+    uri = URI('http://ya.ru/fads/fasd/fasd/#fasdfasd')
     print(uri.__dict__)
 
 if __name__ == '__main__':
