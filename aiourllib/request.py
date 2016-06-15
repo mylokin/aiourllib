@@ -1,6 +1,6 @@
 import collections
 
-from . import rfc2369
+from . import rfc2396
 
 
 class Request(object):
@@ -8,9 +8,9 @@ class Request(object):
 
     def __init__(self, method, url):
         self.method = method
-        self.url = rfc2369.URI(url)
+        self.url = rfc2396.URI(url)
 
-        path = self.url.path
+        path = self.url.abs_path
         if not path.endswith('/'):
             path = '{}/'.format(path)
         if self.url.query:
@@ -18,11 +18,7 @@ class Request(object):
         self.path = path
 
         self.headers = collections.OrderedDict()
-
-        host = self.url.hostname
-        if self.url.scheme == 'https':
-            host = '{}:443'.format(host)
-        self.headers['Host'] = host
+        self.headers['Host'] = self.url.hostport
 
     @property
     def line(self):
