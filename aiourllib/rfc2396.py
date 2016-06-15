@@ -1,3 +1,8 @@
+__all__ = [
+    'URI',
+    'URIException',
+]
+
 import string
 import unittest
 
