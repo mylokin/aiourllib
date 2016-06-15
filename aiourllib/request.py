@@ -3,8 +3,12 @@ import collections
 from . import rfc2396
 
 
-class Request(object):
+class Protocol(object):
     HTTP_VERSION = 1.1
+
+
+class Request(object):
+    PROTOCOL = Protocol
 
     def __init__(self, method, url):
         self.method = method
@@ -25,7 +29,7 @@ class Request(object):
         return '{method} {path} HTTP/{http_version}'.format(
             method=self.method.upper(),
             path=self.path,
-            http_version=self.HTTP_VERSION)
+            http_version=self.PROTOCOL.HTTP_VERSION)
 
     @property
     def header_fields(self):
