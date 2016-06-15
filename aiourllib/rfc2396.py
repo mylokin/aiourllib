@@ -336,7 +336,44 @@ class Protocol(object):
         return data
 
 
-class URI(object):
+class FabricMixin(object):
+    @classmethod
+    def from_string(cls, source):
+        uri = cls()
+        uri.scheme, scheme_specific_part = cls.PROTOCOL.process_scheme(source)
+
+        uri.fragment, scheme_specific_part = \
+            cls.PROTOCOL.process_fragment(scheme_specific_part)
+
+        if uri.scheme:
+            if scheme_specific_part.startswith('//'):
+                # hier_part(net_path)
+                data = cls.PROTOCOL.provide_net_path(scheme_specific_part)
+            elif scheme_specific_part.startswith('/'):
+                # hier_part(abs_path)
+                data = cls.PROTOCOL.provide_abs_path(scheme_specific_part)
+            elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
+                # opaque_part
+                data = cls.PROTOCOL.provide_opaque_part(scheme_specific_part)
+            else:
+                raise URIException(source)
+        else:
+            if scheme_specific_part.startswith('//'):
+                # net_path
+                data = cls.PROTOCOL.provide_net_path(scheme_specific_part)
+            elif scheme_specific_part.startswith('/'):
+                # abs_path
+                data = cls.PROTOCOL.provide_abs_path(scheme_specific_part)
+            else:
+                # rel_path
+                data = cls.PROTOCOL.provide_rel_path(scheme_specific_part)
+
+        for f, v in data.items():
+            setattr(uri, f, v)
+        return uri
+
+
+class URI(FabricMixin):
     __slots__ = [
         'scheme',
         'authority',
@@ -477,39 +514,6 @@ class URI(object):
     def segments(self, segments):
         self._segments = segments
 
-    def parse(self, uri):
-        self.scheme, scheme_specific_part = self.PROTOCOL.process_scheme(uri)
-
-        self.fragment, scheme_specific_part = \
-            self.PROTOCOL.process_fragment(scheme_specific_part)
-
-        if self.scheme:
-            if scheme_specific_part.startswith('//'):
-                # hier_part(net_path)
-                data = self.PROTOCOL.provide_net_path(scheme_specific_part)
-            elif scheme_specific_part.startswith('/'):
-                # hier_part(abs_path)
-                data = self.PROTOCOL.provide_abs_path(scheme_specific_part)
-            elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
-                # opaque_part
-                data = self.PROTOCOL.provide_opaque_part(scheme_specific_part)
-            else:
-                raise URIException(uri)
-        else:
-            if scheme_specific_part.startswith('//'):
-                # net_path
-                data = self.PROTOCOL.provide_net_path(scheme_specific_part)
-            elif scheme_specific_part.startswith('/'):
-                # abs_path
-                data = self.PROTOCOL.provide_abs_path(scheme_specific_part)
-            else:
-                # rel_path
-                data = self.PROTOCOL.provide_rel_path(scheme_specific_part)
-
-        for f, v in data.items():
-            setattr(self, f, v)
-        return self
-
     def __str__(self):
         if self.scheme:
             result = '{}://'.format(self.scheme)
@@ -530,8 +534,8 @@ class URI(object):
 
 
 class TestURI(unittest.TestCase):
-    def assertMatch(self, uri):
-        self.assertEqual(str(URI().parse(uri)), uri)
+    def assertMatch(self, source):
+        self.assertEqual(str(URI.from_string(source)), source)
 
     def test_net_path(self):
         self.assertMatch('http://a/b/c/d;p?q')
@@ -556,18 +560,18 @@ class TestURI(unittest.TestCase):
         self.assertMatch(source)
 
     def test_authority_value(self):
-        uri = URI().parse('mongo://a:b@c:1/d/e')
+        uri = URI.from_string('mongo://a:b@c:1/d/e')
         self.assertEqual(uri.authority, 'a:b@c:1')
 
     def test_rel_segment(self):
         self.assertMatch('a/b/c/')
 
     def test_rel_segment_value(self):
-        self.assertEqual(URI().parse('a/b/c/').rel_segment, 'a')
+        self.assertEqual(URI.from_string('a/b/c/').rel_segment, 'a')
 
     def test_fail_only_query(self):
         with self.assertRaises(RelSegmentException):
-            URI().parse('?a')
+            URI.from_string('?a')
 
 
 if __name__ == '__main__':
