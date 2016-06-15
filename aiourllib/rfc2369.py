@@ -41,11 +41,14 @@ class Protocol(object):
     DELIMS = '<' '>' '#' '%' '"'
     UNWISE = '{' '}' '|' '\\' '^' '`'
 
+    PCHAR = UNRESERVED + ESCAPED + ':' '@' '&' '=' '+' '$' ','
+
 
 class URI(object):
     SCHEME = Protocol.ALPHANUM + '+' '-' '.'
     USERINFO = Protocol.UNRESERVED + Protocol.ESCAPED + ';' ':' '&' '=' '+' '$' ','
     TOPLABEL = Protocol.ALPHANUM + '-'
+    SEGMENT = Protocol.PCHAR + ';'
 
     PORTS = {
         'http': 80,
@@ -150,8 +153,23 @@ class URI(object):
                 else:
                     self.query = None
                 path = scheme_specific_part or '/'
+                if not path.startswith('/'):
+                    path = '/{}'.format(path)
+
+                segments = path.strip('/').split('/')
+                for segment in segments:
+                    if not segment:
+                        continue
+                    if segment[0] not in Protocol.PCHAR:
+                        raise ValueError(segment)
+                    if any(c not in self.SEGMENT for c in segment):
+                        raise ValueError(segment)
+                self.segments = segments
+
+                self.path = path
             else:
                 self.path = '/'
+                self.segments = None
                 self.fragment = self.query = None
 
         elif scheme_specific_part.startswith('/'):
