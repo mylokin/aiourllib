@@ -339,24 +339,143 @@ class Protocol(object):
 class URI(object):
     __slots__ = [
         'scheme',
-        'fragment',
         'authority',
-        'hostport',
-        'host',
-        'userinfo',
-        'port',
-        'ipv6_address',
-        'ipv4_address',
-        'toplabel',
-        'domainlabels',
-        'hostname',
         'abs_path',
-        'rel_segment',
-        'segments',
         'query',
+        'fragment',
         'opaque_part',
+
+        '_hostport',
+        '_hostname',
+        '_host',
+        '_userinfo',
+        '_port',
+        '_ipv4_address',
+        '_ipv6_address',
+        '_toplabel',
+        '_domainlabels',
+
+        '_rel_segment',
+        '_segments',
     ]
     PROTOCOL = Protocol
+
+    def __init__(
+        self,
+        scheme=None,
+        authority=None,
+        abs_path=None,
+        query=None,
+        fragment=None,
+        opaque_part=None,
+    ):
+        self.scheme = scheme
+        self.authority = authority
+        self.abs_path = abs_path
+        self.query = query
+        self.fragment = fragment
+        self.opaque_part = opaque_part
+
+        self._hostport = None
+        self._hostname = None
+        self._host = None
+        self._userinfo = None
+        self._port = None
+        self._ipv4_address = None
+        self._ipv6_address = None
+        self._toplabel = None
+        self._domainlabels = None
+
+        self._rel_segment = None
+        self._segments = None
+
+    @property
+    def hostport(self):
+        return self._hostport
+
+    @hostport.setter
+    def hostport(self, hostport):
+        self._hostport = hostport
+
+    @property
+    def hostname(self):
+        return self._hostname
+
+    @hostname.setter
+    def hostname(self, hostname):
+        self._hostname = hostname
+
+    @property
+    def host(self):
+        return self._host
+
+    @host.setter
+    def host(self, host):
+        self._host = host
+
+    @property
+    def userinfo(self):
+        return self._userinfo
+
+    @userinfo.setter
+    def userinfo(self, userinfo):
+        self._userinfo = userinfo
+
+    @property
+    def port(self):
+        return self._port
+
+    @port.setter
+    def port(self, port):
+        self._port = port
+
+    @property
+    def ipv4_address(self):
+        return self._ipv4_address
+
+    @ipv4_address.setter
+    def ipv4_address(self, ipv4_address):
+        self._ipv4_address = ipv4_address
+
+    @property
+    def ipv6_address(self):
+        return self._ipv6_address
+
+    @ipv6_address.setter
+    def ipv6_address(self, ipv6_address):
+        self._ipv6_address = ipv6_address
+
+    @property
+    def toplabel(self):
+        return self._toplabel
+
+    @toplabel.setter
+    def toplabel(self, toplabel):
+        self._toplabel = toplabel
+
+    @property
+    def domainlabels(self):
+        return self._domainlabels
+
+    @domainlabels.setter
+    def domainlabels(self, domainlabels):
+        self._domainlabels = domainlabels
+
+    @property
+    def rel_segment(self):
+        return self._rel_segment
+
+    @rel_segment.setter
+    def rel_segment(self, rel_segment):
+        self._rel_segment = rel_segment
+
+    @property
+    def segments(self):
+        return self._segments
+
+    @segments.setter
+    def segments(self, segments):
+        self._segments = segments
 
     def parse(self, uri):
         self.authority = self.hostport = self.hostname = self.host = None
