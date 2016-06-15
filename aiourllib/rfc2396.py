@@ -85,7 +85,7 @@ class Protocol(object):
     def process_opaque_part(cls, scheme_specific_part):
         if any(c not in cls.URIC for c in scheme_specific_part[1:]):
             raise URIException(scheme_specific_part)
-        return scheme_specific_part, ''
+        return scheme_specific_part
 
     @classmethod
     def process_net_path(cls, scheme_specific_part):
@@ -257,6 +257,76 @@ class Protocol(object):
                 raise PathSegmentException(segment)
         return segments
 
+    @classmethod
+    def provide_rel_path(cls, uri, scheme_specific_part):
+        uri.query, scheme_specific_part = \
+            cls.process_query(scheme_specific_part)
+
+        uri.rel_segment, scheme_specific_part = \
+            cls.process_rel_segment(scheme_specific_part)
+
+        if scheme_specific_part:
+            uri.abs_path = cls.parse_abs_path(scheme_specific_part)
+            uri.segments = cls.parse_segments(uri.abs_path)
+        else:
+            uri.abs_path = '/'
+            uri.segments = None
+
+    @classmethod
+    def provide_net_path(cls, uri, scheme_specific_part):
+        scheme_specific_part = \
+            cls.process_net_path(scheme_specific_part)
+        authority, scheme_specific_part = \
+            cls.process_authority(scheme_specific_part)
+        uri.userinfo, authority = cls.process_userinfo(authority)
+        uri.host, uri.port = cls.parse_host_port(authority)
+
+        if uri.host.startswith('[') and uri.host.endswith(']'):
+            # ipv6
+            raise NotImplementedError(uri.host)
+        elif uri.host.replace('.', '').isdigit():
+            uri.ipv4_address = cls.parse_ipv4_address(uri.host)
+        elif uri.host:
+            uri.toplabel = cls.parse_toplabel(uri.host)
+            uri.domainlabels = cls.parse_domainlabels(uri.host)
+            uri.hostname = uri.host
+
+        uri.hostport = uri.host
+
+        if uri.port:
+            uri.hostport = '{}:{}'.format(uri.hostport, uri.port)
+
+        uri.authority = uri.hostport
+
+        if uri.userinfo:
+            uri.authority = '{}@{}'.format(uri.userinfo, uri.authority)
+
+        uri.query, scheme_specific_part = \
+            cls.process_query(scheme_specific_part)
+
+        if scheme_specific_part:
+            uri.abs_path = cls.parse_abs_path(scheme_specific_part)
+            uri.segments = cls.parse_segments(uri.abs_path)
+        else:
+            uri.abs_path = '/'
+            uri.segments = None
+
+    @classmethod
+    def provide_abs_path(cls, uri, scheme_specific_part):
+        uri.query, scheme_specific_part = \
+            cls.process_query(scheme_specific_part)
+
+        if scheme_specific_part:
+            uri.abs_path = cls.parse_abs_path(scheme_specific_part)
+            uri.segments = cls.parse_segments(uri.abs_path)
+        else:
+            uri.abs_path = '/'
+            uri.segments = None
+
+    @classmethod
+    def provide_opaque_part(cls, uri, scheme_specific_part):
+        uri.opaque_part = cls.process_opaque_part(scheme_specific_part)
+
 
 class URI(object):
     __slots__ = [
@@ -281,11 +351,6 @@ class URI(object):
     PROTOCOL = Protocol
 
     def parse(self, uri):
-        self.scheme, scheme_specific_part = self.PROTOCOL.process_scheme(uri)
-
-        self.fragment, scheme_specific_part = \
-            self.PROTOCOL.process_fragment(scheme_specific_part)
-
         self.authority = self.hostport = self.hostname = self.host = None
         self.userinfo = None
         self.port = None
@@ -295,102 +360,35 @@ class URI(object):
         self.query = None
         self.opaque_part = None
 
+        self.scheme, scheme_specific_part = self.PROTOCOL.process_scheme(uri)
+
+        self.fragment, scheme_specific_part = \
+            self.PROTOCOL.process_fragment(scheme_specific_part)
+
         if self.scheme:
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
-                self.__handle_net_path(scheme_specific_part)
+                self.PROTOCOL.provide_net_path(self, scheme_specific_part)
             elif scheme_specific_part.startswith('/'):
                 # hier_part(abs_path)
-                self.__handle_abs_path(scheme_specific_part)
+                self.PROTOCOL.provide_abs_path(self, scheme_specific_part)
             elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
                 # opaque_part
-                self.__handle_opaque_part(scheme_specific_part)
+                self.PROTOCOL.provide_opaque_part(self, scheme_specific_part)
             else:
                 raise URIException(uri)
         else:
             if scheme_specific_part.startswith('//'):
                 # net_path
-                self.__handle_net_path(scheme_specific_part)
+                self.PROTOCOL.provide_net_path(self, scheme_specific_part)
             elif scheme_specific_part.startswith('/'):
                 # abs_path
-                self.__handle_abs_path(scheme_specific_part)
+                self.PROTOCOL.provide_abs_path(self, scheme_specific_part)
             else:
                 # rel_path
-                self.__handle_rel_path(scheme_specific_part)
+                self.PROTOCOL.provide_rel_path(self, scheme_specific_part)
 
         return self
-
-    def __handle_rel_path(self, scheme_specific_part):
-        self.query, scheme_specific_part = \
-            self.PROTOCOL.process_query(scheme_specific_part)
-
-        self.rel_segment, scheme_specific_part = \
-            self.PROTOCOL.process_rel_segment(scheme_specific_part)
-
-        if scheme_specific_part:
-            self.abs_path = self.PROTOCOL.parse_abs_path(scheme_specific_part)
-            self.segments = self.PROTOCOL.parse_segments(self.abs_path)
-        else:
-            self.abs_path = '/'
-            self.segments = None
-
-    def __handle_net_path(self, scheme_specific_part):
-        scheme_specific_part = \
-            self.PROTOCOL.process_net_path(scheme_specific_part)
-        authority, scheme_specific_part = \
-            self.PROTOCOL.process_authority(scheme_specific_part)
-        self.userinfo, authority = self.PROTOCOL.process_userinfo(authority)
-        self.host, self.port = self.PROTOCOL.parse_host_port(authority)
-
-        if self.host.startswith('[') and self.host.endswith(']'):
-            # ipv6
-            raise NotImplementedError(self.host)
-        elif self.host.replace('.', '').isdigit():
-            self.ipv4_address = self.PROTOCOL.parse_ipv4_address(self.host)
-        elif self.host:
-            self.toplabel = self.PROTOCOL.parse_toplabel(self.host)
-            self.domainlabels = self.PROTOCOL.parse_domainlabels(self.host)
-            self.hostname = self.host
-
-        self.hostport = self.host
-
-        if self.port:
-            self.hostport = '{}:{}'.format(self.hostport, self.port)
-
-        self.authority = self.hostport
-
-        if self.userinfo:
-            self.authority = '{}@{}'.format(self.userinfo, self.authority)
-
-        self.query, scheme_specific_part = \
-            self.PROTOCOL.process_query(scheme_specific_part)
-
-        if scheme_specific_part:
-            self.abs_path = self.PROTOCOL.parse_abs_path(scheme_specific_part)
-            self.segments = self.PROTOCOL.parse_segments(self.abs_path)
-        else:
-            self.abs_path = '/'
-            self.segments = None
-
-        return scheme_specific_part
-
-    def __handle_abs_path(self, scheme_specific_part):
-        self.query, scheme_specific_part = \
-            self.PROTOCOL.process_query(scheme_specific_part)
-
-        if scheme_specific_part:
-            self.abs_path = self.PROTOCOL.parse_abs_path(scheme_specific_part)
-            self.segments = self.PROTOCOL.parse_segments(self.abs_path)
-        else:
-            self.abs_path = '/'
-            self.segments = None
-
-        return scheme_specific_part
-
-    def __handle_opaque_part(self, scheme_specific_part):
-        self.opaque_part, scheme_specific_part = \
-            self.PROTOCOL.process_opaque_part(scheme_specific_part)
-        return scheme_specific_part
 
     def __str__(self):
         if self.scheme:
