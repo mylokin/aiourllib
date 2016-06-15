@@ -24,7 +24,7 @@ class Request(object):
     ]
 
     @classmethod
-    def method_match(cls, method):
+    def method_exists(cls, method):
         return method in cls.METHOD
 
     @classmethod

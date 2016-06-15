@@ -71,7 +71,13 @@ class URI(object):
 
         if scheme_specific_part.startswith('//'):
             scheme_specific_part = scheme_specific_part[2:]
-            authority, scheme_specific_part = scheme_specific_part.split('/', 1)
+
+            if '/' in scheme_specific_part:
+                authority, scheme_specific_part = scheme_specific_part.split('/', 1)
+            else:
+                authority = scheme_specific_part
+                scheme_specific_part = ''
+
             if not authority:
                 raise ValueError(scheme_specific_part)
 
