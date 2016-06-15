@@ -258,74 +258,82 @@ class Protocol(object):
         return segments
 
     @classmethod
-    def provide_rel_path(cls, uri, scheme_specific_part):
-        uri.query, scheme_specific_part = \
+    def provide_rel_path(cls, scheme_specific_part):
+        data = {}
+        data['query'], scheme_specific_part = \
             cls.process_query(scheme_specific_part)
 
-        uri.rel_segment, scheme_specific_part = \
+        data['rel_segment'], scheme_specific_part = \
             cls.process_rel_segment(scheme_specific_part)
 
         if scheme_specific_part:
-            uri.abs_path = cls.parse_abs_path(scheme_specific_part)
-            uri.segments = cls.parse_segments(uri.abs_path)
+            data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
+            data['segments'] = cls.parse_segments(data['abs_path'])
         else:
-            uri.abs_path = '/'
-            uri.segments = None
+            data['abs_path'] = '/'
+            data['segments'] = None
+        return data
 
     @classmethod
-    def provide_net_path(cls, uri, scheme_specific_part):
+    def provide_net_path(cls, scheme_specific_part):
+        data = {}
         scheme_specific_part = \
             cls.process_net_path(scheme_specific_part)
         authority, scheme_specific_part = \
             cls.process_authority(scheme_specific_part)
-        uri.userinfo, authority = cls.process_userinfo(authority)
-        uri.host, uri.port = cls.parse_host_port(authority)
+        data['userinfo'], authority = cls.process_userinfo(authority)
+        data['host'], data['port'] = cls.parse_host_port(authority)
 
-        if uri.host.startswith('[') and uri.host.endswith(']'):
+        if data['host'].startswith('[') and data['host'].endswith(']'):
             # ipv6
-            raise NotImplementedError(uri.host)
-        elif uri.host.replace('.', '').isdigit():
-            uri.ipv4_address = cls.parse_ipv4_address(uri.host)
-        elif uri.host:
-            uri.toplabel = cls.parse_toplabel(uri.host)
-            uri.domainlabels = cls.parse_domainlabels(uri.host)
-            uri.hostname = uri.host
+            raise NotImplementedError(data['host'])
+        elif data['host'].replace('.', '').isdigit():
+            data['ipv4_address'] = cls.parse_ipv4_address(data['host'])
+        elif data['host']:
+            data['toplabel'] = cls.parse_toplabel(data['host'])
+            data['domainlabels'] = cls.parse_domainlabels(data['host'])
+            data['hostname'] = data['host']
 
-        uri.hostport = uri.host
+        data['hostport'] = data['host']
 
-        if uri.port:
-            uri.hostport = '{}:{}'.format(uri.hostport, uri.port)
+        if data['port']:
+            data['hostport'] = '{}:{}'.format(data['hostport'], data['port'])
 
-        uri.authority = uri.hostport
+        data['authority'] = data['hostport']
 
-        if uri.userinfo:
-            uri.authority = '{}@{}'.format(uri.userinfo, uri.authority)
+        if data['userinfo']:
+            data['authority'] = '{}@{}'.format(data['userinfo'], data['authority'])
 
-        uri.query, scheme_specific_part = \
+        data['query'], scheme_specific_part = \
             cls.process_query(scheme_specific_part)
 
         if scheme_specific_part:
-            uri.abs_path = cls.parse_abs_path(scheme_specific_part)
-            uri.segments = cls.parse_segments(uri.abs_path)
+            data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
+            data['segments'] = cls.parse_segments(data['abs_path'])
         else:
-            uri.abs_path = '/'
-            uri.segments = None
+            data['abs_path'] = '/'
+            data['segments'] = None
+        return data
 
     @classmethod
-    def provide_abs_path(cls, uri, scheme_specific_part):
-        uri.query, scheme_specific_part = \
+    def provide_abs_path(cls, scheme_specific_part):
+        data = {}
+        data['query'], scheme_specific_part = \
             cls.process_query(scheme_specific_part)
 
         if scheme_specific_part:
-            uri.abs_path = cls.parse_abs_path(scheme_specific_part)
-            uri.segments = cls.parse_segments(uri.abs_path)
+            data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
+            data['segments'] = cls.parse_segments(data['abs_path'])
         else:
-            uri.abs_path = '/'
-            uri.segments = None
+            data['abs_path'] = '/'
+            data['segments'] = None
+        return data
 
     @classmethod
-    def provide_opaque_part(cls, uri, scheme_specific_part):
-        uri.opaque_part = cls.process_opaque_part(scheme_specific_part)
+    def provide_opaque_part(cls, scheme_specific_part):
+        data = {}
+        data['opaque_part'] = cls.process_opaque_part(scheme_specific_part)
+        return data
 
 
 class URI(object):
@@ -368,26 +376,28 @@ class URI(object):
         if self.scheme:
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
-                self.PROTOCOL.provide_net_path(self, scheme_specific_part)
+                data = self.PROTOCOL.provide_net_path(scheme_specific_part)
             elif scheme_specific_part.startswith('/'):
                 # hier_part(abs_path)
-                self.PROTOCOL.provide_abs_path(self, scheme_specific_part)
+                data = self.PROTOCOL.provide_abs_path(scheme_specific_part)
             elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
                 # opaque_part
-                self.PROTOCOL.provide_opaque_part(self, scheme_specific_part)
+                data = self.PROTOCOL.provide_opaque_part(scheme_specific_part)
             else:
                 raise URIException(uri)
         else:
             if scheme_specific_part.startswith('//'):
                 # net_path
-                self.PROTOCOL.provide_net_path(self, scheme_specific_part)
+                data = self.PROTOCOL.provide_net_path(scheme_specific_part)
             elif scheme_specific_part.startswith('/'):
                 # abs_path
-                self.PROTOCOL.provide_abs_path(self, scheme_specific_part)
+                data = self.PROTOCOL.provide_abs_path(scheme_specific_part)
             else:
                 # rel_path
-                self.PROTOCOL.provide_rel_path(self, scheme_specific_part)
+                data = self.PROTOCOL.provide_rel_path(scheme_specific_part)
 
+        for f, v in data.items():
+            setattr(self, f, v)
         return self
 
     def __str__(self):
