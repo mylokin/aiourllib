@@ -259,6 +259,25 @@ class Protocol(object):
 
 
 class URI(object):
+    __slots__ = [
+        'scheme',
+        'fragment',
+        'authority',
+        'hostport',
+        'host',
+        'userinfo',
+        'port',
+        'ipv6_address',
+        'ipv4_address',
+        'toplabel',
+        'domainlabels',
+        'hostname',
+        'abs_path',
+        'rel_segment',
+        'segments',
+        'query',
+        'opaque_part',
+    ]
     PROTOCOL = Protocol
 
     def __init__(self, uri):
@@ -267,15 +286,15 @@ class URI(object):
         self.fragment, scheme_specific_part = \
             self.PROTOCOL.process_fragment(scheme_specific_part)
 
-        self.authority = self.hostport = self.host = None
+        self.authority = self.hostport = self.hostname = self.host = None
         self.userinfo = None
         self.port = None
         self.ipv6_address = self.ipv4_address = None
-        self.toplabel = self.domainlabels = self.hostname = None
+        self.toplabel = self.domainlabels = None
         self.abs_path = self.rel_segment = self.segments = None
         self.query = None
-
         self.opaque_part = None
+
         if self.scheme:
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
