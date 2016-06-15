@@ -78,18 +78,13 @@ class URI(object):
         Protocol.ESCAPED +
         ';' '@' '&' '=' '+' '$' ',')
 
-    PORTS = {
-        'http': 80,
-        'https': 443,
-    }
-
     def __init__(self, uri):
         self.scheme, scheme_specific_part = self.process_scheme(uri)
 
         self.fragment, scheme_specific_part = \
             self.process_fragment(scheme_specific_part)
 
-        self.authority = None
+        self.authority = self.hostport = self.host = None
         self.userinfo = None
         self.port = None
         self.ipv6_address = self.ipv4_address = None
@@ -140,19 +135,27 @@ class URI(object):
         authority, scheme_specific_part = \
             self.process_authority(scheme_specific_part)
         self.userinfo, authority = self.process_userinfo(authority)
-        host, port = self.process_host_port(authority)
-        self.port = port or self.PORTS.get(self.scheme)
+        self.host, self.port = self.parse_host_port(authority)
 
-        if host.startswith('[') and host.endswith(']'):
+        if self.host.startswith('[') and self.host.endswith(']'):
             # ipv6
-            raise NotImplementedError(host)
-        elif host.replace('.', '').isdigit():
-            self.ipv4_address = self.parse_ipv4_address(host)
-        elif host:
-            self.toplabel = self.parse_toplabel(host)
-            self.domainlabels = self.parse_domainlabels(host)
-            self.hostname = host
-        self.authority = host
+            raise NotImplementedError(self.host)
+        elif self.host.replace('.', '').isdigit():
+            self.ipv4_address = self.parse_ipv4_address(self.host)
+        elif self.host:
+            self.toplabel = self.parse_toplabel(self.host)
+            self.domainlabels = self.parse_domainlabels(self.host)
+            self.hostname = self.host
+
+        self.hostport = self.host
+
+        if self.port:
+            self.hostport = '{}:{}'.format(self.hostport, self.port)
+
+        self.authority = self.hostport
+
+        if self.userinfo:
+            self.authority = '{}@{}'.format(self.userinfo, self.authority)
 
         self.query, scheme_specific_part = \
             self.process_query(scheme_specific_part)
@@ -217,7 +220,7 @@ class URI(object):
         return userinfo, authority
 
     @classmethod
-    def process_host_port(cls, authority):
+    def parse_host_port(cls, authority):
         if ':' in authority:
             host, port = authority.rsplit(':', 1)
             if port.isdigit():
@@ -400,6 +403,20 @@ class TestURI(unittest.TestCase):
 
     def test_no_scheme(self):
         self.assertMatch('/tmp/test.py')
+
+    def test_authority(self):
+        source = 'mongo://a:b@c:1/d/e'
+        self.assertMatch(source)
+
+    def test_authority_value(self):
+        uri = URI('mongo://a:b@c:1/d/e')
+        self.assertEqual(uri.authority, 'a:b@c:1')
+
+    def test_rel_segment(self):
+        self.assertMatch('a/b/c/')
+
+    def test_rel_segment_value(self):
+        self.assertEqual(URI('a/b/c/').rel_segment, 'a')
 
     def test_fail_only_query(self):
         with self.assertRaises(RelSegmentException):
