@@ -33,95 +33,120 @@ class Protocol(object):
     HEX = string.hexdigits
     ESCAPED = '%' + HEX
 
-    RESERVED = ';' '/' '?' ':' '@' '&' '=' '+' '$' ','
+    RESERVED = ';' '/' '?' ':' '@' '&' '=' '+' '$' ',' '[' ']'
 
     URIC = RESERVED + UNRESERVED + ESCAPED
     URIC_NO_SLASH = UNRESERVED + ESCAPED + ';' '?' ':' '@' '&' '=' '+' '$' ','
 
     DELIMS = '<' '>' '#' '%' '"'
-    UNWISE = '{' '}' '|' '\\' '^' '[' ']' '`'
-
-
-    REGEX_URIC = ''.join(REGEX_SPECIAL_CHARACTERS.get(c, c) for c in URIC)
-    REGEX_URIC_NO_SLASH = ''.join(REGEX_SPECIAL_CHARACTERS.get(c, c) for c in URIC_NO_SLASH)
-
-    REGEX_COMPONENTS = re.compile('(?P<scheme>.*)\:(?P<scheme_specific_part>.*)')
-    REGEX_OPAQUE_PART = re.compile('[{uric_no_slash}][{uric}]*'.format(
-        uric_no_slash=REGEX_URIC_NO_SLASH,
-        uric=REGEX_URIC))
-
-    REGEX_SCHEME = re.compile('^[{alpha}][{alpha}{digit}\+\-\.]*$'.format(
-        alpha=ALPHA,
-        digit=DIGIT))
-
-    REGEX_TOPLABLE = re.compile('^(?:[{alpha}]|[{alpha}][{alphanum}\-]**( alphanum | "-" ) alphanum^')
-
-
-class URIException(Exception):
-    pass
-
-
-class SchemeException(URIException):
-    pass
-
-
-class AuthorityException(URIException):
-    pass
+    UNWISE = '{' '}' '|' '\\' '^' '`'
 
 
 class URI(object):
-    DEFAULT_PORT = 80
-    DEFAULT_ABS_PATH = '/'
+    SCHEME = Protocol.ALPHANUM + '+' '-' '.'
+    USERINFO = Protocol.UNRESERVED + Protocol.ESCAPED + ';' ':' '&' '=' '+' '$' ','
+    TOPLABEL = Protocol.ALPHANUM + '-'
+
+    PORTS = {
+        'http': 80,
+        'https': 443,
+    }
 
     def __init__(self, uri):
-        match = Protocol.REGEX_COMPONENTS.match(uri)
-        if not match:
-            raise URIException(uri)
-        scheme, scheme_specific_part = match.groups()
+        if ':' not in uri:
+            raise ValueError(uri)
 
-        match = Protocol.REGEX_SCHEME.match(scheme)
-        if not match:
-            raise SchemeException(scheme)
+        scheme, scheme_specific_part = uri.split(':', 1)
+        if scheme[0] not in Protocol.ALPHA:
+            raise ValueError(uri)
 
-        # match = Protocol.REGEX_OPAQUE_PART.match(scheme_specific_part).groups()
-        # if not match:
-        #     raise
+        if any(c not in self.SCHEME for c in scheme[1:]):
+            raise ValueError(scheme)
 
-        # import pdb;pdb.set_trace()
-        # if ':' not in url:
-        #     raise URIException(uri)
+        self.scheme = scheme.lower()
 
-        # scheme, uri = uri.split(':', 1)
-        # if not scheme:
-        #     raise SchemeException(scheme)
+        if scheme_specific_part.startswith('//'):
+            scheme_specific_part = scheme_specific_part[2:]
+            authority, scheme_specific_part = scheme_specific_part.split('/', 1)
+            if not authority:
+                raise ValueError(scheme_specific_part)
 
-        # self.scheme = scheme
+            if '@' in authority:
+                userinfo, authority = authority.split('@', 1)
+                if any(c not in self.USERINFO for c in userinfo):
+                    raise ValueError(userinfo)
+                if not userinfo:
+                    userinfo = None
+            else:
+                userinfo = None
+            self.userinfo = userinfo
 
-        # if not uri.startswith('//'):
-        #     raise AuthorityException(uri)
+            if ':' in authority:
+                host, port = authority.rsplit(':', 1)
+                if port.isdigit():
+                    port = int(port)
+                else:
+                    raise ValueError(port)
+            else:
+                host = authority
+                port = self.PORTS[self.scheme]
+            self.port = port
 
-        # uri = uri[2:]
-        # authority, uri = uri.split('/', 1)
+            self.ipv6_address = self.ipv4_address = None
+            self.toplabel = self.domainlabels = self.hostname = None
 
-def simple(uri):
-    scheme, scheme_specific_part = uri.split(':', 1)
+            if host.startswith('[') and host.endswith(']'):
+                host = host[1:-1]
+                self.ipv6_address = host
+            elif host.replace('.', '').isdigit():
+                host = host.split('.')
+                if len(host) == 4 and all(n and n.isdigit() and int(n) <= 255 for n in host):
+                    host = '.'.join(host)
+                else:
+                    raise ValueError('.'.join(host))
+                self.ipv4_address = host
+            else:
+                host = host.split('.')
 
-    if scheme_specific_part.startswith('//'):
-        # hier_part(net_path)
-        pass
-    elif scheme_specific_part.startswith('/'):
-        # hier_part(abs_path)
-        pass
-    else:
-        # opaque_part
-        pass
+                toplabel = host[-1]
+                if toplabel.endswith('.'):
+                    toplabel = toplabel[:-1]
+                if not (toplabel[0] in Protocol.ALPHA):
+                    raise ValueError(toplabel)
+                if not (toplabel[-1] in Protocol.ALPHANUM):
+                    raise ValueError(toplabel)
+                if any(c not in self.TOPLABEL for c in toplabel[1:-1]):
+                    raise ValueError(toplabel)
+                self.toplabel = toplabel
+
+                domainlabels = host[:-1]
+                for domainlabel in domainlabels:
+                    if not (domainlabel[0] in Protocol.ALPHANUM):
+                        raise ValueError(domainlabel)
+                    if not (domainlabel[-1] in Protocol.ALPHANUM):
+                        raise ValueError(domainlabel)
+                    if any(c not in self.TOPLABEL for c in domainlabel[1:-1]):
+                        raise ValueError(domainlabel)
+                self.domainlabels = domainlabels
+
+                host = '.'.join(host)
+                self.hostname = host
+
+            self.host = host
+
+        elif scheme_specific_part.startswith('/'):
+            # hier_part(abs_path)
+            raise NotImplementedError(uri)
+        elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
+            # opaque_part
+            raise NotImplementedError(uri)
+        else:
+            raise ValueError(uri)
 
 
 def main():
-    uri = URI('httfsa%%p:ya.ru//')
-    # print('[{URIC_NO_SLASH}][{URIC}]*'.format(
-    #     URIC_NO_SLASH=Protocol.REGEX_URIC_NO_SLASH,
-    #     URIC=Protocol.REGEX_URIC))
+    uri = URI('http://ya.ru/')
+    print(uri.__dict__)
 
 if __name__ == '__main__':
     main()
