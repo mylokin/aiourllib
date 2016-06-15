@@ -44,6 +44,38 @@ class Protocol(object):
     PCHAR = UNRESERVED + ESCAPED + ':' '@' '&' '=' '+' '$' ','
 
 
+class URIException(Exception):
+    pass
+
+
+class SchemeException(URIException):
+    pass
+
+
+class UserInfoException(URIException):
+    pass
+
+
+class PortException(URIException):
+    pass
+
+
+class AuthorityException(URIException):
+    pass
+
+
+class FragmentException(URIException):
+    pass
+
+
+class QueryException(URIException):
+    pass
+
+
+class PathSegmentException(URIException):
+    pass
+
+
 class URI(object):
     SCHEME = Protocol.ALPHANUM + '+' '-' '.'
     USERINFO = Protocol.UNRESERVED + Protocol.ESCAPED + ';' ':' '&' '=' '+' '$' ','
@@ -62,10 +94,10 @@ class URI(object):
 
         scheme, scheme_specific_part = uri.split(':', 1)
         if scheme[0] not in Protocol.ALPHA:
-            raise ValueError(uri)
+            raise SchemeException(uri)
 
         if any(c not in self.SCHEME for c in scheme[1:]):
-            raise ValueError(scheme)
+            raise SchemeException(scheme)
 
         self.scheme = scheme.lower()
 
@@ -78,13 +110,10 @@ class URI(object):
                 authority = scheme_specific_part
                 scheme_specific_part = ''
 
-            if not authority:
-                raise ValueError(scheme_specific_part)
-
             if '@' in authority:
                 userinfo, authority = authority.split('@', 1)
                 if any(c not in self.USERINFO for c in userinfo):
-                    raise ValueError(userinfo)
+                    raise UserInfoException(userinfo)
                 if not userinfo:
                     userinfo = None
             else:
@@ -96,10 +125,10 @@ class URI(object):
                 if port.isdigit():
                     port = int(port)
                 else:
-                    raise ValueError(port)
+                    raise PortException(port)
             else:
                 host = authority
-                port = self.PORTS[self.scheme]
+                port = self.PORTS.get(self.scheme)
             self.port = port
 
             self.ipv6_address = self.ipv4_address = None
@@ -113,34 +142,34 @@ class URI(object):
                 if len(host) == 4 and all(n and n.isdigit() and int(n) <= 255 for n in host):
                     host = '.'.join(host)
                 else:
-                    raise ValueError('.'.join(host))
+                    raise AuthorityException('.'.join(host))
                 self.ipv4_address = host
-            else:
+            elif host:
                 host = host.split('.')
 
                 toplabel = host[-1]
                 if toplabel.endswith('.'):
                     toplabel = toplabel[:-1]
                 if not toplabel:
-                    raise ValueError('.'.join(host))
+                    raise AuthorityException('.'.join(host))
                 if not (toplabel[0] in Protocol.ALPHA):
-                    raise ValueError(toplabel)
+                    raise AuthorityException(toplabel)
                 if not (toplabel[-1] in Protocol.ALPHANUM):
-                    raise ValueError(toplabel)
+                    raise AuthorityException(toplabel)
                 if any(c not in self.TOPLABEL for c in toplabel[1:-1]):
-                    raise ValueError(toplabel)
+                    raise AuthorityException(toplabel)
                 self.toplabel = toplabel
 
                 domainlabels = host[:-1]
                 for domainlabel in domainlabels:
                     if not domainlabel:
-                        raise ValueError('.'.join(host))
+                        raise AuthorityException('.'.join(host))
                     if not (domainlabel[0] in Protocol.ALPHANUM):
-                        raise ValueError(domainlabel)
+                        raise AuthorityException(domainlabel)
                     if not (domainlabel[-1] in Protocol.ALPHANUM):
-                        raise ValueError(domainlabel)
+                        raise AuthorityException(domainlabel)
                     if any(c not in self.TOPLABEL for c in domainlabel[1:-1]):
-                        raise ValueError(domainlabel)
+                        raise AuthorityException(domainlabel)
                 self.domainlabels = domainlabels
 
                 host = '.'.join(host)
@@ -152,14 +181,14 @@ class URI(object):
                 if '#' in scheme_specific_part:
                     scheme_specific_part, fragment = scheme_specific_part.rsplit('#', 1)
                     if any(c not in Protocol.URIC for c in fragment):
-                        raise ValueError(fragment)
+                        raise FragmentException(fragment)
                     self.fragment = fragment
                 else:
                     self.fragment = None
                 if '?' in scheme_specific_part:
                     scheme_specific_part, query = scheme_specific_part.rsplit('?', 1)
                     if any(c not in Protocol.URIC for c in query):
-                        raise ValueError(query)
+                        raise QueryException(query)
                     self.query = query
                 else:
                     self.query = None
@@ -173,9 +202,9 @@ class URI(object):
                     if not segment:
                         continue
                     if segment[0] not in Protocol.PCHAR:
-                        raise ValueError(segment)
+                        raise PathSegmentException(segment)
                     if any(c not in self.SEGMENT for c in segment):
-                        raise ValueError(segment)
+                        raise PathSegmentException(segment)
                 self.segments = segments
 
                 self.path = path
@@ -191,7 +220,7 @@ class URI(object):
             # opaque_part
             raise NotImplementedError(uri)
         else:
-            raise ValueError(uri)
+            raise URIException(uri)
 
     def __str__(self):
         result = ''
@@ -199,6 +228,8 @@ class URI(object):
             result = '{}{}:'.format(result, self.scheme)
         if self.authority:
             result = '{}//{}'.format(result, self.authority)
+        else:
+            result = '{}//'.format(result)
         result = '{}{}'.format(result, self.path)
         if self.query:
             result = '{}?{}'.format(result, self.query)
@@ -209,6 +240,7 @@ class URI(object):
 def main():
     uri = URI('http://ya.ru/fads/fasd/./fasd#fasdfasd')
     print(uri)
+    print(URI('file:///tm{}p/test.py'))
 
 if __name__ == '__main__':
     main()
