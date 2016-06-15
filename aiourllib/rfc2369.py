@@ -99,8 +99,7 @@ class URI(object):
             self.toplabel = self.domainlabels = self.hostname = None
 
             if host.startswith('[') and host.endswith(']'):
-                host = host[1:-1]
-                self.ipv6_address = host
+                raise NotImplementedError(host)
             elif host.replace('.', '').isdigit():
                 host = host.split('.')
                 if len(host) == 4 and all(n and n.isdigit() and int(n) <= 255 for n in host):
