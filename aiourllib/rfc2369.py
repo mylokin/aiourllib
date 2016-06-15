@@ -115,6 +115,8 @@ class URI(object):
                 toplabel = host[-1]
                 if toplabel.endswith('.'):
                     toplabel = toplabel[:-1]
+                if not toplabel:
+                    raise ValueError('.'.join(host))
                 if not (toplabel[0] in Protocol.ALPHA):
                     raise ValueError(toplabel)
                 if not (toplabel[-1] in Protocol.ALPHANUM):
@@ -125,6 +127,8 @@ class URI(object):
 
                 domainlabels = host[:-1]
                 for domainlabel in domainlabels:
+                    if not domainlabel:
+                        raise ValueError('.'.join(host))
                     if not (domainlabel[0] in Protocol.ALPHANUM):
                         raise ValueError(domainlabel)
                     if not (domainlabel[-1] in Protocol.ALPHANUM):
@@ -153,6 +157,7 @@ class URI(object):
                     self.query = query
                 else:
                     self.query = None
+
                 path = scheme_specific_part or '/'
                 if not path.startswith('/'):
                     path = '/{}'.format(path)
@@ -196,7 +201,7 @@ class URI(object):
         return result
 
 def main():
-    uri = URI('http://ya.ru/fads/fasd/fasd#fasdfasd')
+    uri = URI('http://ya.ru/fads/fasd/./fasd#fasdfasd')
     print(uri)
 
 if __name__ == '__main__':
