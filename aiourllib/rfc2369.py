@@ -1,22 +1,5 @@
 import string
-import re
 
-REGEX_SPECIAL_CHARACTERS = {
-    '.': '\.',
-    '^': '\^',
-    '$': '\$',
-    '*': '\*',
-    '+': '\+',
-    '?': '\?',
-    '[': '\[',
-    ']': '\]',
-    '(': '\(',
-    ')': '\)',
-    '{': '\{',
-    '}': '\}',
-    '-': '\-',
-    '%': '\%',
-}
 
 class Protocol(object):
     LOWALPHA = string.ascii_lowercase
@@ -78,7 +61,11 @@ class PathSegmentException(URIException):
 
 class URI(object):
     SCHEME = Protocol.ALPHANUM + '+' '-' '.'
-    USERINFO = Protocol.UNRESERVED + Protocol.ESCAPED + ';' ':' '&' '=' '+' '$' ','
+    USERINFO = (
+        Protocol.UNRESERVED +
+        Protocol.ESCAPED +
+        ';' ':' '&' '=' '+' '$' ',')
+
     TOPLABEL = Protocol.ALPHANUM + '-'
     SEGMENT = Protocol.PCHAR + ';'
 
@@ -96,7 +83,8 @@ class URI(object):
 
         if scheme_specific_part.startswith('//'):
             scheme_specific_part = self.process_net_path(scheme_specific_part)
-            authority, scheme_specific_part = self.process_authority(scheme_specific_part)
+            authority, scheme_specific_part = \
+                self.process_authority(scheme_specific_part)
             self.userinfo, authority = self.process_userinfo(authority)
             host, port = self.process_host_port(authority)
             self.port = port or self.PORTS.get(self.scheme)
@@ -117,8 +105,10 @@ class URI(object):
             self.authority = host
 
             if scheme_specific_part:
-                self.fragment, scheme_specific_part = self.process_fragment(scheme_specific_part)
-                self.query, scheme_specific_part = self.process_query(scheme_specific_part)
+                self.fragment, scheme_specific_part = \
+                    self.process_fragment(scheme_specific_part)
+                self.query, scheme_specific_part = \
+                    self.process_query(scheme_specific_part)
                 self.path = self.parse_path(scheme_specific_part)
                 self.segments = self.parse_segments(self.path)
 
@@ -143,7 +133,8 @@ class URI(object):
     @classmethod
     def process_authority(cls, scheme_specific_part):
         if '/' in scheme_specific_part:
-            authority, scheme_specific_part = scheme_specific_part.split('/', 1)
+            authority, scheme_specific_part = \
+                scheme_specific_part.split('/', 1)
         else:
             authority = scheme_specific_part
             scheme_specific_part = ''
@@ -177,7 +168,8 @@ class URI(object):
     @classmethod
     def parse_ipv4_address(cls, host):
         host = host.split('.')
-        if len(host) == 4 and all(n and n.isdigit() and int(n) <= 255 for n in host):
+        ipv4 = all(n and n.isdigit() and int(n) <= 255 for n in host)
+        if len(host) == 4 and ipv4:
             host = '.'.join(host)
         else:
             raise AuthorityException('.'.join(host))
@@ -232,7 +224,8 @@ class URI(object):
     @classmethod
     def process_fragment(cls, scheme_specific_part):
         if '#' in scheme_specific_part:
-            scheme_specific_part, fragment = scheme_specific_part.rsplit('#', 1)
+            scheme_specific_part, fragment = \
+                scheme_specific_part.rsplit('#', 1)
             if any(c not in Protocol.URIC for c in fragment):
                 raise FragmentException(fragment)
         else:
@@ -282,6 +275,7 @@ class URI(object):
         if self.fragment:
             result = '{}#{}'.format(result, self.fragment)
         return result
+
 
 def main():
     uri = URI('http://ya.ru/fads/fasd/./fasd#fasdfasd')
