@@ -117,22 +117,8 @@ class URI(object):
             self.authority = host
 
             if scheme_specific_part:
-                if '#' in scheme_specific_part:
-                    scheme_specific_part, fragment = scheme_specific_part.rsplit('#', 1)
-                    if any(c not in Protocol.URIC for c in fragment):
-                        raise FragmentException(fragment)
-                    self.fragment = fragment
-                else:
-                    self.fragment = None
-
-                if '?' in scheme_specific_part:
-                    scheme_specific_part, query = scheme_specific_part.rsplit('?', 1)
-                    if any(c not in Protocol.URIC for c in query):
-                        raise QueryException(query)
-                    self.query = query
-                else:
-                    self.query = None
-
+                self.fragment, scheme_specific_part = self.process_fragment(scheme_specific_part)
+                self.query, scheme_specific_part = self.process_query(scheme_specific_part)
                 self.path = self.parse_path(scheme_specific_part)
                 self.segments = self.parse_segments(self.path)
 
@@ -242,6 +228,26 @@ class URI(object):
             raise SchemeException(scheme)
 
         return scheme.lower(), scheme_specific_part
+
+    @classmethod
+    def process_fragment(cls, scheme_specific_part):
+        if '#' in scheme_specific_part:
+            scheme_specific_part, fragment = scheme_specific_part.rsplit('#', 1)
+            if any(c not in Protocol.URIC for c in fragment):
+                raise FragmentException(fragment)
+        else:
+            fragment = None
+        return fragment, scheme_specific_part
+
+    @classmethod
+    def process_query(cls, scheme_specific_part):
+        if '?' in scheme_specific_part:
+            scheme_specific_part, query = scheme_specific_part.rsplit('?', 1)
+            if any(c not in Protocol.URIC for c in query):
+                raise QueryException(query)
+        else:
+            query = None
+        return query, scheme_specific_part
 
     @classmethod
     def parse_path(cls, scheme_specific_part):
