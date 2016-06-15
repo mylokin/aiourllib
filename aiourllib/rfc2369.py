@@ -95,34 +95,11 @@ class URI(object):
         self.scheme, scheme_specific_part = self.process_scheme(uri)
 
         if scheme_specific_part.startswith('//'):
-            scheme_specific_part = scheme_specific_part[2:]
-
-            if '/' in scheme_specific_part:
-                authority, scheme_specific_part = scheme_specific_part.split('/', 1)
-            else:
-                authority = scheme_specific_part
-                scheme_specific_part = ''
-
-            if '@' in authority:
-                userinfo, authority = authority.split('@', 1)
-                if any(c not in self.USERINFO for c in userinfo):
-                    raise UserInfoException(userinfo)
-                if not userinfo:
-                    userinfo = None
-            else:
-                userinfo = None
-            self.userinfo = userinfo
-
-            if ':' in authority:
-                host, port = authority.rsplit(':', 1)
-                if port.isdigit():
-                    port = int(port)
-                else:
-                    raise PortException(port)
-            else:
-                host = authority
-                port = self.PORTS.get(self.scheme)
-            self.port = port
+            scheme_specific_part = self.process_net_path(scheme_specific_part)
+            authority, scheme_specific_part = self.process_authority(scheme_specific_part)
+            self.userinfo, authority = self.process_userinfo(authority)
+            host, port = self.process_host_port(authority)
+            self.port = port or self.PORTS.get(self.scheme)
 
             self.ipv6_address = self.ipv4_address = None
             self.toplabel = self.domainlabels = self.hostname = None
@@ -131,41 +108,10 @@ class URI(object):
                 # ipv6
                 raise NotImplementedError(host)
             elif host.replace('.', '').isdigit():
-                host = host.split('.')
-                if len(host) == 4 and all(n and n.isdigit() and int(n) <= 255 for n in host):
-                    host = '.'.join(host)
-                else:
-                    raise AuthorityException('.'.join(host))
-                self.ipv4_address = host
+                self.ipv4_address = self.parse_ipv4_address(host)
             elif host:
-                host = host.split('.')
-
-                toplabel = host[-1]
-                if toplabel.endswith('.'):
-                    toplabel = toplabel[:-1]
-                if not toplabel:
-                    raise AuthorityException('.'.join(host))
-                if not (toplabel[0] in Protocol.ALPHA):
-                    raise AuthorityException(toplabel)
-                if not (toplabel[-1] in Protocol.ALPHANUM):
-                    raise AuthorityException(toplabel)
-                if any(c not in self.TOPLABEL for c in toplabel[1:-1]):
-                    raise AuthorityException(toplabel)
-                self.toplabel = toplabel
-
-                domainlabels = host[:-1]
-                for domainlabel in domainlabels:
-                    if not domainlabel:
-                        raise AuthorityException('.'.join(host))
-                    if not (domainlabel[0] in Protocol.ALPHANUM):
-                        raise AuthorityException(domainlabel)
-                    if not (domainlabel[-1] in Protocol.ALPHANUM):
-                        raise AuthorityException(domainlabel)
-                    if any(c not in self.TOPLABEL for c in domainlabel[1:-1]):
-                        raise AuthorityException(domainlabel)
-                self.domainlabels = domainlabels
-
-                host = '.'.join(host)
+                self.toplabel = self.parse_toplabel(host)
+                self.domainlabels = self.parse_domainlabels(host)
                 self.hostname = host
 
             self.authority = host
@@ -203,6 +149,88 @@ class URI(object):
             raise NotImplementedError(uri)
         else:
             raise URIException(uri)
+
+    @classmethod
+    def process_net_path(cls, scheme_specific_part):
+        return scheme_specific_part[2:]
+
+    @classmethod
+    def process_authority(cls, scheme_specific_part):
+        if '/' in scheme_specific_part:
+            authority, scheme_specific_part = scheme_specific_part.split('/', 1)
+        else:
+            authority = scheme_specific_part
+            scheme_specific_part = ''
+        return authority, scheme_specific_part
+
+    @classmethod
+    def process_userinfo(cls, authority):
+        if '@' in authority:
+            userinfo, authority = authority.split('@', 1)
+            if any(c not in cls.USERINFO for c in userinfo):
+                raise UserInfoException(userinfo)
+            if not userinfo:
+                userinfo = None
+        else:
+            userinfo = None
+        return userinfo, authority
+
+    @classmethod
+    def process_host_port(cls, authority):
+        if ':' in authority:
+            host, port = authority.rsplit(':', 1)
+            if port.isdigit():
+                port = int(port)
+            else:
+                raise PortException(port)
+        else:
+            host = authority
+            port = None
+        return host, port
+
+    @classmethod
+    def parse_ipv4_address(cls, host):
+        host = host.split('.')
+        if len(host) == 4 and all(n and n.isdigit() and int(n) <= 255 for n in host):
+            host = '.'.join(host)
+        else:
+            raise AuthorityException('.'.join(host))
+        return host
+
+    @classmethod
+    def parse_toplabel(cls, host):
+        host = host.split('.')
+
+        toplabel = host[-1]
+        if toplabel.endswith('.'):
+            toplabel = toplabel[:-1]
+        if not toplabel:
+            raise AuthorityException('.'.join(host))
+        if not (toplabel[0] in Protocol.ALPHA):
+            raise AuthorityException(toplabel)
+        if not (toplabel[-1] in Protocol.ALPHANUM):
+            raise AuthorityException(toplabel)
+        if any(c not in cls.TOPLABEL for c in toplabel[1:-1]):
+            raise AuthorityException(toplabel)
+
+        return toplabel
+
+    @classmethod
+    def parse_domainlabels(cls, host):
+        host = host.split('.')
+
+        domainlabels = host[:-1]
+        for domainlabel in domainlabels:
+            if not domainlabel:
+                raise AuthorityException('.'.join(host))
+            if not (domainlabel[0] in Protocol.ALPHANUM):
+                raise AuthorityException(domainlabel)
+            if not (domainlabel[-1] in Protocol.ALPHANUM):
+                raise AuthorityException(domainlabel)
+            if any(c not in cls.TOPLABEL for c in domainlabel[1:-1]):
+                raise AuthorityException(domainlabel)
+
+        return domainlabels
 
     @classmethod
     def process_scheme(cls, uri):
