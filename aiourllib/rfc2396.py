@@ -75,11 +75,12 @@ class URI(object):
     }
 
     def __init__(self, uri):
-        if ':' not in uri:
-            # relative uri
-            raise NotImplementedError(uri)
-
         self.scheme, scheme_specific_part = self.process_scheme(uri)
+
+        self.fragment, scheme_specific_part = \
+            self.process_fragment(scheme_specific_part)
+        self.query, scheme_specific_part = \
+            self.process_query(scheme_specific_part)
 
         if scheme_specific_part.startswith('//'):
             scheme_specific_part = self.process_net_path(scheme_specific_part)
@@ -105,16 +106,11 @@ class URI(object):
             self.authority = host
 
             if scheme_specific_part:
-                self.fragment, scheme_specific_part = \
-                    self.process_fragment(scheme_specific_part)
-                self.query, scheme_specific_part = \
-                    self.process_query(scheme_specific_part)
                 self.abs_path = self.parse_abs_path(scheme_specific_part)
                 self.segments = self.parse_segments(self.abs_path)
             else:
                 self.abs_path = '/'
                 self.segments = None
-                self.fragment = self.query = None
 
         elif scheme_specific_part.startswith('/'):
             # hier_part(abs_path)
@@ -211,6 +207,9 @@ class URI(object):
 
     @classmethod
     def process_scheme(cls, uri):
+        if ':' not in uri:
+            return None, uri
+
         scheme, scheme_specific_part = uri.split(':', 1)
         if scheme[0] not in Protocol.ALPHA:
             raise SchemeException(uri)
@@ -277,9 +276,11 @@ class URI(object):
 
 
 def main():
-    uri = URI('http://ya.ru/fads/fasd/./fasd#fasdfasd')
+    uri = URI('http://ya.ru/fads/fasd/./fasd?fuu#fasdfasd')
     print(uri)
     print(URI('file:///tmp/test.py'))
+    print(URI('///tmp/test.py'))
+
 
 if __name__ == '__main__':
     main()
