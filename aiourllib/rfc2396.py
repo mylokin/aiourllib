@@ -68,7 +68,10 @@ class URI(object):
 
     TOPLABEL = Protocol.ALPHANUM + '-'
     SEGMENT = Protocol.PCHAR + ';'
-    REL_SEGMENT = Protocol.UNRESERVED + Protocol.ESCAPED + ';' '@' '&' '=' '+' '$' ','
+    REL_SEGMENT = (
+        Protocol.UNRESERVED +
+        Protocol.ESCAPED +
+        ';' '@' '&' '=' '+' '$' ',')
 
     PORTS = {
         'http': 80,
@@ -314,7 +317,6 @@ class URI(object):
 
         return rel_path
 
-
     @classmethod
     def parse_segments(cls, abs_path):
         segments = abs_path.strip('/').split('/')
@@ -354,6 +356,7 @@ def main():
     print(URI('http://a/b/c/d;p?q'))
     print(URI('g.'))
     print(URI('/../g'))
+    print(URI('?fasdf'))
 
 
 if __name__ == '__main__':
