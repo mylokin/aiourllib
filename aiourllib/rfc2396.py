@@ -59,6 +59,10 @@ class PathSegmentException(URIException):
     pass
 
 
+class RelSegmentException(URIException):
+    pass
+
+
 class URI(object):
     SCHEME = Protocol.ALPHANUM + '+' '-' '.'
     USERINFO = (
@@ -89,7 +93,7 @@ class URI(object):
         self.port = None
         self.ipv6_address = self.ipv4_address = None
         self.toplabel = self.domainlabels = self.hostname = None
-        self.abs_path = self.rel_path = self.segments = None
+        self.abs_path = self.rel_segment = self.segments = None
         self.query = None
 
         self.opaque_part = None
@@ -120,10 +124,15 @@ class URI(object):
         self.query, scheme_specific_part = \
             self.process_query(scheme_specific_part)
 
-        self.rel_path = self.parse_rel_path(scheme_specific_part)
-        self.segments = self.parse_segments(self.rel_path)
+        self.rel_segment, scheme_specific_part = \
+            self.process_rel_segment(scheme_specific_part)
 
-        return scheme_specific_part
+        if scheme_specific_part:
+            self.abs_path = self.parse_abs_path(scheme_specific_part)
+            self.segments = self.parse_segments(self.abs_path)
+        else:
+            self.abs_path = '/'
+            self.segments = None
 
     def handle_net_path(self, scheme_specific_part):
         scheme_specific_part = self.process_net_path(scheme_specific_part)
@@ -218,6 +227,27 @@ class URI(object):
             host = authority
             port = None
         return host, port
+
+    @classmethod
+    def process_rel_segment(cls, scheme_specific_part):
+        if not scheme_specific_part:
+            raise RelSegmentException(scheme_specific_part)
+
+        if '/' in scheme_specific_part:
+            rel_segment, scheme_specific_part = \
+                scheme_specific_part.split('/', 1)
+        else:
+            rel_segment = scheme_specific_part
+            scheme_specific_part = ''
+            return scheme_specific_part, ''
+
+        if not rel_segment:
+            raise RelSegmentException(rel_segment)
+
+        if any(c not in cls.REL_SEGMENT for c in rel_segment):
+            raise RelSegmentException(rel_segment)
+
+        return rel_segment, scheme_specific_part
 
     @classmethod
     def parse_ipv4_address(cls, host):
@@ -340,7 +370,7 @@ class URI(object):
             if self.fragment:
                 result = '{}#{}'.format(result, self.fragment)
         else:
-            result = '{}'.format(self.abs_path or self.rel_path)
+            result = '{}{}'.format(self.rel_segment or '', self.abs_path)
             if self.query:
                 result = '{}?{}'.format(result, self.query)
             if self.fragment:
@@ -354,7 +384,7 @@ def main():
     print(URI('/tmp/test.py'))
     print(URI('tmp+fdf:///d/test.py?fasdfs'))
     print(URI('http://a/b/c/d;p?q'))
-    print(URI('g.'))
+    print(URI('g./f/f/'))
     print(URI('/../g'))
     print(URI('?fasdf'))
 
