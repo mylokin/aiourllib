@@ -57,7 +57,8 @@ class URI(object):
 
     def __init__(self, uri):
         if ':' not in uri:
-            raise ValueError(uri)
+            # relative uri
+            raise NotImplementedError(uri)
 
         scheme, scheme_specific_part = uri.split(':', 1)
         if scheme[0] not in Protocol.ALPHA:
@@ -99,6 +100,7 @@ class URI(object):
             self.toplabel = self.domainlabels = self.hostname = None
 
             if host.startswith('[') and host.endswith(']'):
+                # ipv6
                 raise NotImplementedError(host)
             elif host.replace('.', '').isdigit():
                 host = host.split('.')
@@ -134,7 +136,7 @@ class URI(object):
                 host = '.'.join(host)
                 self.hostname = host
 
-            self.host = host
+            self.authority = host
 
             if scheme_specific_part:
                 if '#' in scheme_specific_part:
@@ -180,10 +182,22 @@ class URI(object):
         else:
             raise ValueError(uri)
 
+    def __str__(self):
+        result = ''
+        if self.scheme:
+            result = '{}{}:'.format(result, self.scheme)
+        if self.authority:
+            result = '{}//{}'.format(result, self.authority)
+        result = '{}{}'.format(result, self.path)
+        if self.query:
+            result = '{}?{}'.format(result, self.query)
+        if self.fragment:
+            result = '{}#{}'.format(result, self.fragment)
+        return result
 
 def main():
-    uri = URI('http://ya.ru/fads/fasd/fasd/#fasdfasd')
-    print(uri.__dict__)
+    uri = URI('http://ya.ru/fads/fasd/fasd#fasdfasd')
+    print(uri)
 
 if __name__ == '__main__':
     main()
