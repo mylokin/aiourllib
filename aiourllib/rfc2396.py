@@ -320,7 +320,7 @@ class Protocol(object):
         else:
             data['abs_path'] = '/'
             data['segments'] = None
-        return {k: v for k, v in data.items() if k not in ['host']}
+        return {k: v for k, v in data.items() if k not in ['host', 'port', 'userinfo']}
 
     @classmethod
     def provide_abs_path(cls, scheme_specific_part):
@@ -394,9 +394,6 @@ class URI(object):
         '_cache',
         '_hostport',
         '_hostname',
-        '_host',
-        '_userinfo',
-        '_port',
         '_ipv4_address',
         '_ipv6_address',
         '_toplabel',
@@ -426,9 +423,6 @@ class URI(object):
         self._cache = None
         self._hostport = None
         self._hostname = None
-        self._host = None
-        self._userinfo = None
-        self._port = None
         self._ipv4_address = None
         self._ipv6_address = None
         self._toplabel = None
@@ -461,19 +455,15 @@ class URI(object):
 
     @property
     def userinfo(self):
-        return self._userinfo
-
-    @userinfo.setter
-    def userinfo(self, userinfo):
-        self._userinfo = userinfo
+        if 'userinfo' not in self._cache:
+            self._cache.update(self.PROTOCOL.parse_authority(self.authority))
+        return self._cache['userinfo']
 
     @property
     def port(self):
-        return self._port
-
-    @port.setter
-    def port(self, port):
-        self._port = port
+        if 'port' not in self._cache:
+            self._cache.update(self.PROTOCOL.parse_authority(self.authority))
+        return self._cache['port']
 
     @property
     def ipv4_address(self):
