@@ -82,16 +82,22 @@ class URI(object):
         self.query, scheme_specific_part = \
             self.process_query(scheme_specific_part)
 
+        self.authority = None
+        self.userinfo = None
+        self.port = None
+        self.ipv6_address = self.ipv4_address = None
+        self.toplabel = self.domainlabels = self.hostname = None
+        self.abs_path = self.segments = None
+        self.opaque_part = None
+
         if scheme_specific_part.startswith('//'):
+            # hier_part(net_path)
             scheme_specific_part = self.process_net_path(scheme_specific_part)
             authority, scheme_specific_part = \
                 self.process_authority(scheme_specific_part)
             self.userinfo, authority = self.process_userinfo(authority)
             host, port = self.process_host_port(authority)
             self.port = port or self.PORTS.get(self.scheme)
-
-            self.ipv6_address = self.ipv4_address = None
-            self.toplabel = self.domainlabels = self.hostname = None
 
             if host.startswith('[') and host.endswith(']'):
                 # ipv6
@@ -102,24 +108,29 @@ class URI(object):
                 self.toplabel = self.parse_toplabel(host)
                 self.domainlabels = self.parse_domainlabels(host)
                 self.hostname = host
-
             self.authority = host
-
-            if scheme_specific_part:
-                self.abs_path = self.parse_abs_path(scheme_specific_part)
-                self.segments = self.parse_segments(self.abs_path)
-            else:
-                self.abs_path = '/'
-                self.segments = None
-
         elif scheme_specific_part.startswith('/'):
             # hier_part(abs_path)
-            raise NotImplementedError(uri)
+            pass
         elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
             # opaque_part
-            raise NotImplementedError(uri)
+            self.opaque_part, scheme_specific_part = \
+                self.process_opaque_part(scheme_specific_part)
         else:
             raise URIException(uri)
+
+        if scheme_specific_part:
+            self.abs_path = self.parse_abs_path(scheme_specific_part)
+            self.segments = self.parse_segments(self.abs_path)
+        elif not self.opaque_part:
+            self.abs_path = '/'
+            self.segments = None
+
+    @classmethod
+    def process_opaque_part(cls, scheme_specific_part):
+        if any(c not in Protocol.URIC for c in scheme_specific_part[1:]):
+            raise URIException(scheme_specific_part)
+        return scheme_specific_part, ''
 
     @classmethod
     def process_net_path(cls, scheme_specific_part):
@@ -265,9 +276,9 @@ class URI(object):
             result = '{}{}:'.format(result, self.scheme)
         if self.authority:
             result = '{}//{}'.format(result, self.authority)
-        else:
+        elif self.scheme:
             result = '{}//'.format(result)
-        result = '{}{}'.format(result, self.abs_path)
+        result = '{}{}'.format(result, self.abs_path or self.opaque_part)
         if self.query:
             result = '{}?{}'.format(result, self.query)
         if self.fragment:
@@ -279,7 +290,11 @@ def main():
     uri = URI('http://ya.ru/fads/fasd/./fasd?fuu#fasdfasd')
     print(uri)
     print(URI('file:///tmp/test.py'))
-    print(URI('///tmp/test.py'))
+    print(URI('/tmp/test.py'))
+    print(URI('tmp+fdfd/test.py'))
+    print(URI('http://a/b/c/d;p?q'))
+    print(URI('g.'))
+    print(URI('/../g'))
 
 
 if __name__ == '__main__':
