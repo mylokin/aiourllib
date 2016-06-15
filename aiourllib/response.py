@@ -32,7 +32,7 @@ class Response(object):
     @property
     def status_code(self):
         if not self._status_code:
-            self._status_code = Parser.parse_status_code(self.status)
+            self._status_code = Protocol.parse_status_code(self.status)
         return self._status_code
 
     @property
@@ -50,19 +50,19 @@ class Response(object):
     @property
     def charset(self):
         if (not self._charset) and self.content_type:
-            self._charset = Parser.parse_charset(self.content_type, self._charset)
+            self._charset = Protocol.parse_charset(self.content_type, self._charset)
         return self._charset
 
     @property
     def cache_control(self):
         if (not self._cache_control) and ('Cache-Control' in self.headers):
-            self._cache_control = Parser.parse_cache_control(self.headers['Cache-Control'])
+            self._cache_control = Protocol.parse_cache_control(self.headers['Cache-Control'])
         return self._cache_control
 
     async def read_headers(self):
         status = (await self.reader.readline()).strip()
         status = utils.smart_text(status, 'latin-1')
-        self.status = Parser.parse_status(status)
+        self.status = Protocol.parse_status(status)
 
         self.headers = collections.OrderedDict()
         while True:
@@ -72,7 +72,7 @@ class Response(object):
                 break
 
             try:
-                header, value = line.split(Parser.COLON, 1)
+                header, value = line.split(Protocol.COLON, 1)
             except ValueError:
                 raise ValueError('Bad header line: {}'.format(utils.smart_text(line)))
 
@@ -106,7 +106,7 @@ class Response(object):
         self.writer.close()
 
 
-class Parser(object):
+class Protocol(object):
     COLON = ':'
     HTTP = 'HTTP/'
 
