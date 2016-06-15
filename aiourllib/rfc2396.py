@@ -258,6 +258,13 @@ class Protocol(object):
         return segments
 
     @classmethod
+    def parse_authority(cls, authority):
+        data = {}
+        data['userinfo'], authority = cls.process_userinfo(authority)
+        data['host'], data['port'] = cls.parse_host_port(authority)
+        return data
+
+    @classmethod
     def provide_rel_path(cls, scheme_specific_part):
         data = {}
         data['query'], scheme_specific_part = \
@@ -281,8 +288,8 @@ class Protocol(object):
             cls.process_net_path(scheme_specific_part)
         authority, scheme_specific_part = \
             cls.process_authority(scheme_specific_part)
-        data['userinfo'], authority = cls.process_userinfo(authority)
-        data['host'], data['port'] = cls.parse_host_port(authority)
+
+        data.update(cls.parse_authority(authority))
 
         if data['host'].startswith('[') and data['host'].endswith(']'):
             # ipv6
@@ -313,7 +320,7 @@ class Protocol(object):
         else:
             data['abs_path'] = '/'
             data['segments'] = None
-        return data
+        return {k: v for k, v in data.items() if k not in ['host']}
 
     @classmethod
     def provide_abs_path(cls, scheme_specific_part):
@@ -336,10 +343,12 @@ class Protocol(object):
         return data
 
 
-class FabricMixin(object):
+class FabricURI(object):
+    PROTOCOL = Protocol
+
     @classmethod
     def from_string(cls, source):
-        uri = cls()
+        uri = URI()
         uri.scheme, scheme_specific_part = cls.PROTOCOL.process_scheme(source)
 
         uri.fragment, scheme_specific_part = \
@@ -373,7 +382,7 @@ class FabricMixin(object):
         return uri
 
 
-class URI(FabricMixin):
+class URI(object):
     __slots__ = [
         'scheme',
         'authority',
@@ -382,6 +391,7 @@ class URI(FabricMixin):
         'fragment',
         'opaque_part',
 
+        '_cache',
         '_hostport',
         '_hostname',
         '_host',
@@ -413,6 +423,7 @@ class URI(FabricMixin):
         self.fragment = fragment
         self.opaque_part = opaque_part
 
+        self._cache = None
         self._hostport = None
         self._hostname = None
         self._host = None
@@ -444,11 +455,9 @@ class URI(FabricMixin):
 
     @property
     def host(self):
-        return self._host
-
-    @host.setter
-    def host(self, host):
-        self._host = host
+        if 'host' not in self._cache:
+            self._cache.update(self.PROTOCOL.parse_authority(self.authority))
+        return self._cache['host']
 
     @property
     def userinfo(self):
@@ -535,7 +544,7 @@ class URI(FabricMixin):
 
 class TestURI(unittest.TestCase):
     def assertMatch(self, source):
-        self.assertEqual(str(URI.from_string(source)), source)
+        self.assertEqual(str(FabricURI.from_string(source)), source)
 
     def test_net_path(self):
         self.assertMatch('http://a/b/c/d;p?q')
@@ -560,18 +569,18 @@ class TestURI(unittest.TestCase):
         self.assertMatch(source)
 
     def test_authority_value(self):
-        uri = URI.from_string('mongo://a:b@c:1/d/e')
+        uri = FabricURI.from_string('mongo://a:b@c:1/d/e')
         self.assertEqual(uri.authority, 'a:b@c:1')
 
     def test_rel_segment(self):
         self.assertMatch('a/b/c/')
 
     def test_rel_segment_value(self):
-        self.assertEqual(URI.from_string('a/b/c/').rel_segment, 'a')
+        self.assertEqual(FabricURI.from_string('a/b/c/').rel_segment, 'a')
 
     def test_fail_only_query(self):
         with self.assertRaises(RelSegmentException):
-            URI.from_string('?a')
+            FabricURI.from_string('?a')
 
 
 if __name__ == '__main__':
