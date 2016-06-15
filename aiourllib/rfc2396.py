@@ -1,6 +1,7 @@
 import string
 import unittest
 
+
 class URIException(Exception):
     pass
 
@@ -308,7 +309,8 @@ class URI(object):
             self.segments = None
 
     def _handle_net_path(self, scheme_specific_part):
-        scheme_specific_part = self.PROTOCOL.process_net_path(scheme_specific_part)
+        scheme_specific_part = \
+            self.PROTOCOL.process_net_path(scheme_specific_part)
         authority, scheme_specific_part = \
             self.PROTOCOL.process_authority(scheme_specific_part)
         self.userinfo, authority = self.PROTOCOL.process_userinfo(authority)
@@ -363,7 +365,6 @@ class URI(object):
         self.opaque_part, scheme_specific_part = \
             self.PROTOCOL.process_opaque_part(scheme_specific_part)
         return scheme_specific_part
-
 
     def __str__(self):
         if self.scheme:
