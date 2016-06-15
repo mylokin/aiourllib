@@ -478,15 +478,6 @@ class URI(object):
         self._segments = segments
 
     def parse(self, uri):
-        self.authority = self.hostport = self.hostname = self.host = None
-        self.userinfo = None
-        self.port = None
-        self.ipv6_address = self.ipv4_address = None
-        self.toplabel = self.domainlabels = None
-        self.abs_path = self.rel_segment = self.segments = None
-        self.query = None
-        self.opaque_part = None
-
         self.scheme, scheme_specific_part = self.PROTOCOL.process_scheme(uri)
 
         self.fragment, scheme_specific_part = \
