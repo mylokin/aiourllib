@@ -68,6 +68,7 @@ class URI(object):
 
     TOPLABEL = Protocol.ALPHANUM + '-'
     SEGMENT = Protocol.PCHAR + ';'
+    REL_SEGMENT = Protocol.UNRESERVED + Protocol.ESCAPED + ';' '@' '&' '=' '+' '$' ','
 
     PORTS = {
         'http': 80,
@@ -85,28 +86,41 @@ class URI(object):
         self.port = None
         self.ipv6_address = self.ipv4_address = None
         self.toplabel = self.domainlabels = self.hostname = None
-        self.abs_path = self.segments = None
-        self.opaque_part = None
+        self.abs_path = self.rel_path = self.segments = None
         self.query = None
 
-        if scheme_specific_part.startswith('//'):
-            # hier_part(net_path)
-            scheme_specific_part = self.handle_net_path(scheme_specific_part)
-        elif scheme_specific_part.startswith('/'):
-            # hier_part(abs_path)
-            scheme_specific_part = self.handle_abs_path(scheme_specific_part)
-        elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
-            # opaque_part
-            scheme_specific_part = self.handle_opaque_part(scheme_specific_part)
+        self.opaque_part = None
+        if self.scheme:
+            if scheme_specific_part.startswith('//'):
+                # hier_part(net_path)
+                self.handle_net_path(scheme_specific_part)
+            elif scheme_specific_part.startswith('/'):
+                # hier_part(abs_path)
+                self.handle_abs_path(scheme_specific_part)
+            elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
+                # opaque_part
+                self.handle_opaque_part(scheme_specific_part)
+            else:
+                raise URIException(uri)
         else:
-            raise URIException(uri)
+            if scheme_specific_part.startswith('//'):
+                # net_path
+                self.handle_net_path(scheme_specific_part)
+            elif scheme_specific_part.startswith('/'):
+                # abs_path
+                self.handle_abs_path(scheme_specific_part)
+            else:
+                # rel_path
+                self.handle_rel_path(scheme_specific_part)
 
-        if scheme_specific_part:
-            self.abs_path = self.parse_abs_path(scheme_specific_part)
-            self.segments = self.parse_segments(self.abs_path)
-        elif not self.opaque_part:
-            self.abs_path = '/'
-            self.segments = None
+    def handle_rel_path(self, scheme_specific_part):
+        self.query, scheme_specific_part = \
+            self.process_query(scheme_specific_part)
+
+        self.rel_path = self.parse_rel_path(scheme_specific_part)
+        self.segments = self.parse_segments(self.rel_path)
+
+        return scheme_specific_part
 
     def handle_net_path(self, scheme_specific_part):
         scheme_specific_part = self.process_net_path(scheme_specific_part)
@@ -126,14 +140,30 @@ class URI(object):
             self.domainlabels = self.parse_domainlabels(host)
             self.hostname = host
         self.authority = host
+
         self.query, scheme_specific_part = \
             self.process_query(scheme_specific_part)
+
+        if scheme_specific_part:
+            self.abs_path = self.parse_abs_path(scheme_specific_part)
+            self.segments = self.parse_segments(self.abs_path)
+        else:
+            self.abs_path = '/'
+            self.segments = None
 
         return scheme_specific_part
 
     def handle_abs_path(self, scheme_specific_part):
         self.query, scheme_specific_part = \
             self.process_query(scheme_specific_part)
+
+        if scheme_specific_part:
+            self.abs_path = self.parse_abs_path(scheme_specific_part)
+            self.segments = self.parse_segments(self.abs_path)
+        else:
+            self.abs_path = '/'
+            self.segments = None
+
         return scheme_specific_part
 
     def handle_opaque_part(self, scheme_specific_part):
@@ -274,6 +304,18 @@ class URI(object):
         return abs_path
 
     @classmethod
+    def parse_rel_path(cls, scheme_specific_part):
+        rel_path = scheme_specific_part
+        if not rel_path:
+            raise PathSegmentException(rel_path)
+
+        if any(c not in cls.REL_SEGMENT for c in rel_path):
+            raise PathSegmentException(rel_path)
+
+        return rel_path
+
+
+    @classmethod
     def parse_segments(cls, abs_path):
         segments = abs_path.strip('/').split('/')
         for segment in segments:
@@ -286,27 +328,29 @@ class URI(object):
         return segments
 
     def __str__(self):
-        result = ''
         if self.scheme:
-            result = '{}{}:'.format(result, self.scheme)
-        if self.authority:
-            result = '{}//{}'.format(result, self.authority)
-        elif self.scheme:
-            result = '{}//'.format(result)
-        result = '{}{}'.format(result, self.abs_path or self.opaque_part)
-        if self.query:
-            result = '{}?{}'.format(result, self.query)
-        if self.fragment:
-            result = '{}#{}'.format(result, self.fragment)
+            result = '{}://'.format(self.scheme)
+            if self.authority:
+                result = '{}{}'.format(result, self.authority)
+            result = '{}{}'.format(result, self.abs_path or self.opaque_part)
+            if self.query:
+                result = '{}?{}'.format(result, self.query)
+            if self.fragment:
+                result = '{}#{}'.format(result, self.fragment)
+        else:
+            result = '{}'.format(self.abs_path or self.rel_path)
+            if self.query:
+                result = '{}?{}'.format(result, self.query)
+            if self.fragment:
+                result = '{}#{}'.format(result, self.fragment)
         return result
 
 
 def main():
-    uri = URI('http://ya.ru/fads/fasd/./fasd?fuu#fasdfasd')
-    print(uri)
+    print(URI('http://ya.ru/fads/fasd/./fasd?fuu#fasdfasd'))
     print(URI('file:///tmp/test.py'))
     print(URI('/tmp/test.py'))
-    print(URI('tmp+fdfd/test.py?fasdfs').__dict__)
+    print(URI('tmp+fdf:///d/test.py?fasdfs'))
     print(URI('http://a/b/c/d;p?q'))
     print(URI('g.'))
     print(URI('/../g'))
