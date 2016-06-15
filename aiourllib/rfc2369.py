@@ -92,14 +92,7 @@ class URI(object):
             # relative uri
             raise NotImplementedError(uri)
 
-        scheme, scheme_specific_part = uri.split(':', 1)
-        if scheme[0] not in Protocol.ALPHA:
-            raise SchemeException(uri)
-
-        if any(c not in self.SCHEME for c in scheme[1:]):
-            raise SchemeException(scheme)
-
-        self.scheme = scheme.lower()
+        self.scheme, scheme_specific_part = self.process_scheme(uri)
 
         if scheme_specific_part.startswith('//'):
             scheme_specific_part = scheme_specific_part[2:]
@@ -210,6 +203,17 @@ class URI(object):
             raise NotImplementedError(uri)
         else:
             raise URIException(uri)
+
+    @classmethod
+    def process_scheme(cls, uri):
+        scheme, scheme_specific_part = uri.split(':', 1)
+        if scheme[0] not in Protocol.ALPHA:
+            raise SchemeException(uri)
+
+        if any(c not in cls.SCHEME for c in scheme[1:]):
+            raise SchemeException(scheme)
+
+        return scheme.lower(), scheme_specific_part
 
     @classmethod
     def parse_path(cls, scheme_specific_part):
