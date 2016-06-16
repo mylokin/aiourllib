@@ -320,7 +320,7 @@ class Protocol(object):
         else:
             data['abs_path'] = '/'
             data['segments'] = None
-        return {k: v for k, v in data.items() if k not in ['host', 'port', 'userinfo']}
+        return data
 
     @classmethod
     def provide_abs_path(cls, scheme_specific_part):
@@ -377,8 +377,8 @@ class FabricURI(object):
                 # rel_path
                 data = cls.PROTOCOL.provide_rel_path(scheme_specific_part)
 
-        for f, v in data.items():
-            setattr(uri, f, v)
+        for k, v in {k: v for k, v in data.items() if k in ['scheme', 'authority', 'abs_path', 'rel_segment', 'query', 'fragment', 'opaque_part']}.items():
+            setattr(uri, k, v)
         return uri
 
 
@@ -387,20 +387,11 @@ class URI(object):
         'scheme',
         'authority',
         'abs_path',
+        'rel_segment',
         'query',
         'fragment',
         'opaque_part',
-
         '_cache',
-        '_hostport',
-        '_hostname',
-        '_ipv4_address',
-        '_ipv6_address',
-        '_toplabel',
-        '_domainlabels',
-
-        '_rel_segment',
-        '_segments',
     ]
     PROTOCOL = Protocol
 
@@ -409,6 +400,7 @@ class URI(object):
         scheme=None,
         authority=None,
         abs_path=None,
+        rel_segment=None,
         query=None,
         fragment=None,
         opaque_part=None,
@@ -416,36 +408,26 @@ class URI(object):
         self.scheme = scheme
         self.authority = authority
         self.abs_path = abs_path
+        self.rel_segment = rel_segment
         self.query = query
         self.fragment = fragment
         self.opaque_part = opaque_part
-
-        self._cache = None
-        self._hostport = None
-        self._hostname = None
-        self._ipv4_address = None
-        self._ipv6_address = None
-        self._toplabel = None
-        self._domainlabels = None
-
-        self._rel_segment = None
-        self._segments = None
+        self._cache = {}
 
     @property
     def hostport(self):
-        return self._hostport
-
-    @hostport.setter
-    def hostport(self, hostport):
-        self._hostport = hostport
+        if 'hostport' not in self._cache:
+            self._cache['hostport'] = '{}:{}'.format(self.host, self.port)
+        return self._cache['hostport']
 
     @property
     def hostname(self):
-        return self._hostname
-
-    @hostname.setter
-    def hostname(self, hostname):
-        self._hostname = hostname
+        if 'hostname' not in self._cache:
+            if self.ipv4_address:
+                self._cache['hostname'] = None
+            else:
+                self._cache['hostname'] = self.host
+        return self._cache['hostname']
 
     @property
     def host(self):
@@ -467,51 +449,41 @@ class URI(object):
 
     @property
     def ipv4_address(self):
-        return self._ipv4_address
-
-    @ipv4_address.setter
-    def ipv4_address(self, ipv4_address):
-        self._ipv4_address = ipv4_address
+        if 'ipv4_address' not in self._cache:
+            if self.host.replace('.', '').isdigit():
+                self._cache['ipv4_address'] = \
+                    self.PROTOCOL.parse_ipv4_address(self.host)
+            else:
+                self._cache['ipv4_address'] = None
+        return self._cache['ipv4_address']
 
     @property
     def ipv6_address(self):
-        return self._ipv6_address
-
-    @ipv6_address.setter
-    def ipv6_address(self, ipv6_address):
-        self._ipv6_address = ipv6_address
+        raise NotImplementedError()
 
     @property
     def toplabel(self):
-        return self._toplabel
-
-    @toplabel.setter
-    def toplabel(self, toplabel):
-        self._toplabel = toplabel
+        if 'toplabel' not in self._cache:
+            if self.hostname:
+                self._cache['toplabel'] = self.PROTOCOL.parse_toplabel(self.hostname)
+            else:
+                self._cache['toplabel'] = None
+        return self._cache['toplabel']
 
     @property
     def domainlabels(self):
-        return self._domainlabels
-
-    @domainlabels.setter
-    def domainlabels(self, domainlabels):
-        self._domainlabels = domainlabels
-
-    @property
-    def rel_segment(self):
-        return self._rel_segment
-
-    @rel_segment.setter
-    def rel_segment(self, rel_segment):
-        self._rel_segment = rel_segment
+        if 'domainlabels' not in self._cache:
+            if self.hostname:
+                self._cache['domainlabels'] = self.PROTOCOL.parse_domainlabels(self.hostname)
+            else:
+                self._cache['domainlabels'] = None
+        return self._cache['domainlabels']
 
     @property
     def segments(self):
-        return self._segments
-
-    @segments.setter
-    def segments(self, segments):
-        self._segments = segments
+        if 'segments' not in self._cache:
+            self._cache['segments'] = self.PROTOCOL.parse_segments(self.abs_path)
+        return self._cache['segments']
 
     def __str__(self):
         if self.scheme:
@@ -555,8 +527,10 @@ class TestURI(unittest.TestCase):
         self.assertMatch('/tmp/test.py')
 
     def test_authority(self):
-        source = 'mongo://a:b@c:1/d/e'
-        self.assertMatch(source)
+        self.assertMatch('mongo://a:b@c:1/d/e')
+
+    def test_ipv4_address(self):
+        self.assertMatch('http://10.10.10.10/')
 
     def test_authority_value(self):
         uri = FabricURI.from_string('mongo://a:b@c:1/d/e')
