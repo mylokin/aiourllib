@@ -391,7 +391,17 @@ class URI(object):
         'query',
         'fragment',
         'opaque_part',
-        '_cache',
+
+        'host',
+        'port',
+        'userinfo',
+        'ipv4_address',
+        'ipv6_address',
+        'hostport',
+        'hostname',
+        'toplabel',
+        'domainlabels',
+        'segments',
     ]
     PROTOCOL = Protocol
 
@@ -412,78 +422,45 @@ class URI(object):
         self.query = query
         self.fragment = fragment
         self.opaque_part = opaque_part
-        self._cache = {}
 
-    @property
-    def hostport(self):
-        if 'hostport' not in self._cache:
-            self._cache['hostport'] = '{}:{}'.format(self.host, self.port)
-        return self._cache['hostport']
+        self.host = None
+        self.port = None
+        self.userinfo = None
 
-    @property
-    def hostname(self):
-        if 'hostname' not in self._cache:
-            if self.ipv4_address:
-                self._cache['hostname'] = None
-            else:
-                self._cache['hostname'] = self.host
-        return self._cache['hostname']
+        self.ipv4_address = None
+        self.ipv6_address = None
 
-    @property
-    def host(self):
-        if 'host' not in self._cache:
-            self._cache.update(self.PROTOCOL.parse_authority(self.authority))
-        return self._cache['host']
+        self.hostport = None
+        self.hostname = None
 
-    @property
-    def userinfo(self):
-        if 'userinfo' not in self._cache:
-            self._cache.update(self.PROTOCOL.parse_authority(self.authority))
-        return self._cache['userinfo']
+        self.toplabel = None
+        self.domainlabels = None
 
-    @property
-    def port(self):
-        if 'port' not in self._cache:
-            self._cache.update(self.PROTOCOL.parse_authority(self.authority))
-        return self._cache['port']
+        self.segments = None
+        if self.abs_path:
+            self.PROTOCOL.parse_segments(self.abs_path)
 
-    @property
-    def ipv4_address(self):
-        if 'ipv4_address' not in self._cache:
+        if self.authority:
+            data = self.PROTOCOL.parse_authority(self.authority)
+            self.host = self.hostport = data['host']
+            self.port = data['port']
+            self.userinfo = data['userinfo']
+
             if self.host.replace('.', '').isdigit():
-                self._cache['ipv4_address'] = \
+                self.ipv4_address = \
                     self.PROTOCOL.parse_ipv4_address(self.host)
             else:
-                self._cache['ipv4_address'] = None
-        return self._cache['ipv4_address']
+                self.ipv4_address = None
 
-    @property
-    def ipv6_address(self):
-        raise NotImplementedError()
+            if self.port:
+                self.hostport = '{}:{}'.format(self.hostport, self.port)
 
-    @property
-    def toplabel(self):
-        if 'toplabel' not in self._cache:
+            if not self.ipv4_address:
+                self.hostname = self.host
+
             if self.hostname:
-                self._cache['toplabel'] = self.PROTOCOL.parse_toplabel(self.hostname)
-            else:
-                self._cache['toplabel'] = None
-        return self._cache['toplabel']
-
-    @property
-    def domainlabels(self):
-        if 'domainlabels' not in self._cache:
-            if self.hostname:
-                self._cache['domainlabels'] = self.PROTOCOL.parse_domainlabels(self.hostname)
-            else:
-                self._cache['domainlabels'] = None
-        return self._cache['domainlabels']
-
-    @property
-    def segments(self):
-        if 'segments' not in self._cache:
-            self._cache['segments'] = self.PROTOCOL.parse_segments(self.abs_path)
-        return self._cache['segments']
+                self.toplabel = self.PROTOCOL.parse_toplabel(self.hostname)
+                self.domainlabels = self.PROTOCOL.parse_domainlabels(self.hostname)
 
     def __str__(self):
         if self.scheme:
