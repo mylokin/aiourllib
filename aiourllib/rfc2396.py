@@ -288,10 +288,10 @@ class Protocol(object):
         data = {}
         scheme_specific_part = \
             cls.process_net_path(scheme_specific_part)
-        authority, scheme_specific_part = \
+        data['authority'], scheme_specific_part = \
             cls.process_authority(scheme_specific_part)
 
-        data.update(cls.parse_authority(authority))
+        data.update(cls.parse_authority(data['authority']))
 
         if data['host'].startswith('[') and data['host'].endswith(']'):
             # ipv6
@@ -307,11 +307,6 @@ class Protocol(object):
 
         if data['port']:
             data['hostport'] = '{}:{}'.format(data['hostport'], data['port'])
-
-        data['authority'] = data['hostport']
-
-        if data['userinfo']:
-            data['authority'] = '{}@{}'.format(data['userinfo'], data['authority'])
 
         data['query'], scheme_specific_part = \
             cls.process_query(scheme_specific_part)
