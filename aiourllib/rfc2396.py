@@ -115,19 +115,6 @@ class Protocol(object):
         return userinfo, authority
 
     @classmethod
-    def parse_host_port(cls, authority):
-        if ':' in authority:
-            host, port = authority.rsplit(':', 1)
-            if port.isdigit():
-                port = int(port)
-            else:
-                raise PortException(port)
-        else:
-            host = authority
-            port = None
-        return host, port
-
-    @classmethod
     def process_rel_segment(cls, scheme_specific_part):
         if not scheme_specific_part:
             raise RelSegmentException(scheme_specific_part)
@@ -147,6 +134,19 @@ class Protocol(object):
             raise RelSegmentException(rel_segment)
 
         return rel_segment, scheme_specific_part
+
+    @classmethod
+    def parse_host_port(cls, authority):
+        if ':' in authority:
+            host, port = authority.rsplit(':', 1)
+            if port.isdigit():
+                port = int(port)
+            else:
+                raise PortException(port)
+        else:
+            host = authority
+            port = None
+        return host, port
 
     @classmethod
     def parse_ipv4_address(cls, host):
@@ -236,17 +236,6 @@ class Protocol(object):
         return abs_path
 
     @classmethod
-    def parse_rel_path(cls, scheme_specific_part):
-        rel_path = scheme_specific_part
-        if not rel_path:
-            raise PathSegmentException(rel_path)
-
-        if any(c not in cls.REL_SEGMENT for c in rel_path):
-            raise PathSegmentException(rel_path)
-
-        return rel_path
-
-    @classmethod
     def parse_segments(cls, abs_path):
         segments = abs_path.strip('/').split('/')
         for segment in segments:
@@ -263,9 +252,6 @@ class Protocol(object):
         data = {}
         data['userinfo'], authority = cls.process_userinfo(authority)
         data['host'], data['port'] = cls.parse_host_port(authority)
-        data['hostport'] = data['host']
-        if data['port']:
-            data['hostport'] = '{}:{}'.format(data['hostport'], data['port'])
         return data
 
     @classmethod
@@ -279,10 +265,8 @@ class Protocol(object):
 
         if scheme_specific_part:
             data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
-            data['segments'] = cls.parse_segments(data['abs_path'])
         else:
             data['abs_path'] = '/'
-            data['segments'] = None
         return data
 
     @classmethod
@@ -311,10 +295,8 @@ class Protocol(object):
 
         if scheme_specific_part:
             data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
-            data['segments'] = cls.parse_segments(data['abs_path'])
         else:
             data['abs_path'] = '/'
-            data['segments'] = None
         return data
 
     @classmethod
