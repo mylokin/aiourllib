@@ -457,19 +457,19 @@ class URI(object):
             self.port = data['port']
             self.userinfo = data['userinfo']
 
-            if self.host.replace('.', '').isdigit():
+            if self.host.startswith('[') and self.host.endswith(']'):
+                # ipv6
+                raise NotImplementedError(self.host)
+            elif self.host.replace('.', '').isdigit():
                 self.ipv4_address = \
                     self.PROTOCOL.parse_ipv4_address(self.host)
-            else:
-                self.ipv4_address = None
-
-            if self.port:
-                self.hostport = '{}:{}'.format(self.hostport, self.port)
-
-            if not self.ipv4_address:
+            elif self.host:
                 self.hostname = self.host
                 self.toplabel = self.PROTOCOL.parse_toplabel(self.hostname)
                 self.domainlabels = self.PROTOCOL.parse_domainlabels(self.hostname)
+
+            if self.port:
+                self.hostport = '{}:{}'.format(self.hostport, self.port)
 
     def __str__(self):
         if self.scheme:
