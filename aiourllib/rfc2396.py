@@ -389,7 +389,10 @@ class FabricURI(object):
                 data.update(cls.PROTOCOL.provide_rel_path(scheme_specific_part))
                 Model = RelPath
 
-        model = Model(**{f: data[f] for f in Model._fields})
+        return cls.from_model(Model(**{f: data[f] for f in Model._fields}))
+
+    @classmethod
+    def from_model(cls, model):
         return URI(**model._asdict())
 
 
