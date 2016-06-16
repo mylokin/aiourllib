@@ -1,5 +1,6 @@
 __all__ = [
     'URI',
+    'URIFabric',
     'URIException',
 ]
 
@@ -350,7 +351,7 @@ RelPath = collections.namedtuple('RelPath', ['fragment', 'abs_path', 'rel_segmen
 OpaquePart = collections.namedtuple('OpaquePart', ['scheme', 'fragment', 'opaque_part'])
 
 
-class FabricURI(object):
+class URIFabric(object):
     PROTOCOL = Protocol
 
     @classmethod
@@ -497,7 +498,7 @@ class URI(object):
 
 class TestURI(unittest.TestCase):
     def assertMatch(self, source):
-        self.assertEqual(str(FabricURI.from_string(source)), source)
+        self.assertEqual(str(URIFabric.from_string(source)), source)
 
     def test_net_path(self):
         self.assertMatch('http://a/b/c/d;p?q')
@@ -524,18 +525,18 @@ class TestURI(unittest.TestCase):
         self.assertMatch('http://10.10.10.10/')
 
     def test_authority_value(self):
-        uri = FabricURI.from_string('mongo://a:b@c:1/d/e')
+        uri = URIFabric.from_string('mongo://a:b@c:1/d/e')
         self.assertEqual(uri.authority, 'a:b@c:1')
 
     def test_rel_segment(self):
         self.assertMatch('a/b/c/')
 
     def test_rel_segment_value(self):
-        self.assertEqual(FabricURI.from_string('a/b/c/').rel_segment, 'a')
+        self.assertEqual(URIFabric.from_string('a/b/c/').rel_segment, 'a')
 
     def test_fail_only_query(self):
         with self.assertRaises(RelSegmentException):
-            FabricURI.from_string('?a')
+            URIFabric.from_string('?a')
 
 
 if __name__ == '__main__':
