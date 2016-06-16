@@ -4,7 +4,6 @@ __all__ = [
     'URIException',
 ]
 
-import collections
 import string
 import unittest
 
@@ -325,14 +324,13 @@ class Protocol(object):
         return data
 
 
-NetPath = collections.namedtuple('NetPath', ['scheme', 'fragment', 'authority', 'abs_path', 'query'])
-AbsPath = collections.namedtuple('AbsPath', ['scheme', 'fragment', 'abs_path', 'query'])
-RelPath = collections.namedtuple('RelPath', ['fragment', 'abs_path', 'rel_segment', 'query'])
-OpaquePart = collections.namedtuple('OpaquePart', ['scheme', 'fragment', 'opaque_part'])
-
-
 class URIFabric(object):
     PROTOCOL = Protocol
+
+    FIELDS_NET_PATH = ('scheme', 'fragment', 'authority', 'abs_path', 'query')
+    FIELDS_ABS_PATH = ('scheme', 'fragment', 'abs_path', 'query')
+    FIELDS_REL_PATH = ('fragment', 'abs_path', 'rel_segment', 'query')
+    FIELDS_OPAQUE_PART = ('scheme', 'fragment', 'opaque_part')
 
     @classmethod
     def from_string(cls, source):
@@ -345,32 +343,32 @@ class URIFabric(object):
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
                 data.update(cls.PROTOCOL.provide_net_path(scheme_specific_part))
-                Model = NetPath
+                fields = cls.FIELDS_NET_PATH
             elif scheme_specific_part.startswith('/'):
                 # hier_part(abs_path)
                 data.update(cls.PROTOCOL.provide_abs_path(scheme_specific_part))
-                Model = AbsPath
+                fields = cls.FIELDS_ABS_PATH
             elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
                 # opaque_part
                 data.update(cls.PROTOCOL.provide_opaque_part(scheme_specific_part))
-                Model = OpaquePart
+                fields = cls.FIELDS_OPAQUE_PART
             else:
                 raise URIException(source)
         else:
             if scheme_specific_part.startswith('//'):
                 # net_path
                 data.update(cls.PROTOCOL.provide_net_path(scheme_specific_part))
-                Model = NetPath
+                fields = cls.FIELDS_NET_PATH
             elif scheme_specific_part.startswith('/'):
                 # abs_path
                 data.update(cls.PROTOCOL.provide_abs_path(scheme_specific_part))
-                Model = AbsPath
+                fields = cls.FIELDS_ABS_PATH
             else:
                 # rel_path
                 data.update(cls.PROTOCOL.provide_rel_path(scheme_specific_part))
-                Model = RelPath
+                fields = cls.FIELDS_REL_PATH
 
-        return URI(**{f: data[f] for f in Model._fields})
+        return URI(**{f: data[f] for f in fields})
 
 
 class URI(object):
