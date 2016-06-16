@@ -3,6 +3,7 @@ __all__ = [
     'URIException',
 ]
 
+import collections
 import string
 import unittest
 
@@ -343,43 +344,53 @@ class Protocol(object):
         return data
 
 
+NetPath = collections.namedtuple('NetPath', ['scheme', 'fragment', 'authority', 'abs_path', 'query'])
+AbsPath = collections.namedtuple('AbsPath', ['scheme', 'fragment', 'abs_path', 'query'])
+RelPath = collections.namedtuple('RelPath', ['fragment', 'abs_path', 'rel_segment', 'query'])
+OpaquePart = collections.namedtuple('OpaquePart', ['scheme', 'fragment', 'opaque_part'])
+
+
 class FabricURI(object):
     PROTOCOL = Protocol
 
     @classmethod
     def from_string(cls, source):
-        uri = URI()
-        uri.scheme, scheme_specific_part = cls.PROTOCOL.process_scheme(source)
-
-        uri.fragment, scheme_specific_part = \
+        data = {}
+        data['scheme'], scheme_specific_part = cls.PROTOCOL.process_scheme(source)
+        data['fragment'], scheme_specific_part = \
             cls.PROTOCOL.process_fragment(scheme_specific_part)
 
-        if uri.scheme:
+        if data['scheme']:
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
-                data = cls.PROTOCOL.provide_net_path(scheme_specific_part)
+                data.update(cls.PROTOCOL.provide_net_path(scheme_specific_part))
+                Model = NetPath
             elif scheme_specific_part.startswith('/'):
                 # hier_part(abs_path)
-                data = cls.PROTOCOL.provide_abs_path(scheme_specific_part)
+                data.update(cls.PROTOCOL.provide_abs_path(scheme_specific_part))
+                Model = AbsPath
             elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
                 # opaque_part
-                data = cls.PROTOCOL.provide_opaque_part(scheme_specific_part)
+                data.update(cls.PROTOCOL.provide_opaque_part(scheme_specific_part))
+                Model = OpaquePart
             else:
                 raise URIException(source)
         else:
             if scheme_specific_part.startswith('//'):
                 # net_path
-                data = cls.PROTOCOL.provide_net_path(scheme_specific_part)
+                data.update(cls.PROTOCOL.provide_net_path(scheme_specific_part))
+                Model = NetPath
             elif scheme_specific_part.startswith('/'):
                 # abs_path
-                data = cls.PROTOCOL.provide_abs_path(scheme_specific_part)
+                data.update(cls.PROTOCOL.provide_abs_path(scheme_specific_part))
+                Model = AbsPath
             else:
                 # rel_path
-                data = cls.PROTOCOL.provide_rel_path(scheme_specific_part)
+                data.update(cls.PROTOCOL.provide_rel_path(scheme_specific_part))
+                Model = RelPath
 
-        for k, v in {k: v for k, v in data.items() if k in ['scheme', 'authority', 'abs_path', 'rel_segment', 'query', 'fragment', 'opaque_part']}.items():
-            setattr(uri, k, v)
-        return uri
+        model = Model(**{f: data[f] for f in Model._fields})
+        return URI(**model._asdict())
 
 
 class URI(object):
