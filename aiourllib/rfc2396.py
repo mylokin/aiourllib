@@ -469,6 +469,10 @@ class TestURI(unittest.TestCase):
     def test_extended_scheme(self):
         self.assertMatch('tmp+fdf:///d/test.py?fasdfs')
 
+    def test_broken_scheme(self):
+        with self.assertRaises(SchemeException):
+            self.assertMatch('1a:///d/test.py?fasdfs')
+
     def test_no_scheme(self):
         self.assertMatch('/tmp/test.py')
 
