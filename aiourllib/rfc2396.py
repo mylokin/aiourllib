@@ -468,8 +468,6 @@ class URI(object):
 
             if not self.ipv4_address:
                 self.hostname = self.host
-
-            if self.hostname:
                 self.toplabel = self.PROTOCOL.parse_toplabel(self.hostname)
                 self.domainlabels = self.PROTOCOL.parse_domainlabels(self.hostname)
 
