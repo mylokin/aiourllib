@@ -264,6 +264,9 @@ class Protocol(object):
         data = {}
         data['userinfo'], authority = cls.process_userinfo(authority)
         data['host'], data['port'] = cls.parse_host_port(authority)
+        data['hostport'] = data['host']
+        if data['port']:
+            data['hostport'] = '{}:{}'.format(data['hostport'], data['port'])
         return data
 
     @classmethod
@@ -292,31 +295,13 @@ class Protocol(object):
             cls.process_authority(scheme_specific_part)
 
         data.update(cls.parse_authority(data['authority']))
-
-        if data['host'].startswith('[') and data['host'].endswith(']'):
-            # ipv6
-            raise NotImplementedError(data['host'])
-        elif data['host'].replace('.', '').isdigit():
-            data['ipv4_address'] = cls.parse_ipv4_address(data['host'])
-        elif data['host']:
-            data['toplabel'] = cls.parse_toplabel(data['host'])
-            data['domainlabels'] = cls.parse_domainlabels(data['host'])
-            data['hostname'] = data['host']
-
-        data['hostport'] = data['host']
-
-        if data['port']:
-            data['hostport'] = '{}:{}'.format(data['hostport'], data['port'])
-
         data['query'], scheme_specific_part = \
             cls.process_query(scheme_specific_part)
 
         if scheme_specific_part:
             data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
-            data['segments'] = cls.parse_segments(data['abs_path'])
         else:
             data['abs_path'] = '/'
-            data['segments'] = None
         return data
 
     @classmethod
