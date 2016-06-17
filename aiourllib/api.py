@@ -29,10 +29,10 @@ async def connect(url, loop=None):
     return models.Connection(url, reader, writer)
 
 
-async def get(url, loop=None):
+async def get(url, headers=None, loop=None):
     conn = await connect(url, loop=loop)
 
-    request = str(Request('get', url)).encode('latin-1')
+    request = str(Request('get', url, headers=headers)).encode('latin-1')
     conn.writer.write(request)
 
     return (await read(conn))

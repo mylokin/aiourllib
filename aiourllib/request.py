@@ -14,7 +14,7 @@ class Request(object):
 
     def __init__(self, method, url, headers=None):
         self.method = method
-        self.url = rfc2396.URI(url)
+        self.url = rfc2396.URIFabric.from_string(url)
 
         path = self.url.abs_path
         if not path.endswith('/'):

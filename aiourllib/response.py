@@ -1,5 +1,6 @@
 import asyncio
 import collections
+import json
 import re
 
 from . import utils
@@ -146,20 +147,25 @@ class Response(object):
 
     async def read_chunks(self):
         content = b''
-        while len(content) < self.content_length:
-            r = (await self.reader.read(self.content_length - len(content)))
-            if r:
-                content += r
-            else:
+        while True:
+            chunk_size = await self.reader.readline()
+            chunk_size = chunk_size.strip()
+            if not chunk_size:
                 break
+
+            chunk_size = int(chunk_size, base=16)
+            r = await self.reader.readexactly(chunk_size)
+            if not r:
+                break
+
+            content += r
+            await self.reader.readline()
+
         return content
 
     async def read_content(self):
         if not self._content:
-            if self.content_length:
-                self._content = await self.read_chunks()
-            else:
-                self._content = await self.reader.read()
+            self._content = await self.read_chunks()
         return self._content
 
     async def read_text(self):
