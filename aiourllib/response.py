@@ -166,5 +166,9 @@ class Response(object):
         content = await self.read_content()
         return content.decode(self.charset)
 
+    async def read_json(self):
+        content = await self.read_text()
+        return json.loads(content)
+
     def close(self):
         self.writer.close()

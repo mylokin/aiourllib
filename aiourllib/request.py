@@ -12,7 +12,7 @@ class Protocol(object):
 class Request(object):
     PROTOCOL = Protocol
 
-    def __init__(self, method, url):
+    def __init__(self, method, url, headers=None):
         self.method = method
         self.url = rfc2396.URI(url)
 
@@ -23,7 +23,7 @@ class Request(object):
             path = '{}?{}'.format(path, self.url.query)
         self.path = path
 
-        self.headers = collections.OrderedDict()
+        self.headers = collections.OrderedDict(headers or [])
         self.headers['Host'] = self.url.hostport
 
     @property
