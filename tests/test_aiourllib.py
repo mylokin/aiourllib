@@ -20,7 +20,7 @@ class HttpbinTestCase(unittest.TestCase):
 
     async def read_json(self, url):
         with contextlib.closing(await aiourllib.get(url)) as response:
-            return await response.read_content()
+            return await response.read_json()
 
     def fetch(self, url):
         return self.loop.run_until_complete(

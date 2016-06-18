@@ -8,6 +8,18 @@ import zlib
 from . import utils
 
 
+class ResponseException(Exception):
+    pass
+
+
+class TransferEncodingException(ResponseException):
+    pass
+
+
+class ContentEncodingException(ResponseException):
+    pass
+
+
 class Protocol(object):
     COLON = ':'
     HTTP = 'HTTP/'
@@ -123,7 +135,7 @@ class Response(object):
 
     @property
     def content_encoding(self):
-        if (not self._content_encoding):
+        if not self._content_encoding:
             if self.has_header('Content-Encoding'):
                 self._content_encoding = \
                     utils.smart_text(self.get_header('Content-Encoding'))
@@ -133,12 +145,12 @@ class Response(object):
 
     @property
     def transfer_encoding(self):
-        if (
-            (not self._transfer_encoding) and
-            self.has_header('Transfer-Encoding')
-        ):
-            self._transfer_encoding = \
-                utils.smart_text(self.get_header('Transfer-Encoding'))
+        if not self._transfer_encoding:
+            if self.has_header('Transfer-Encoding'):
+                self._transfer_encoding = \
+                    utils.smart_text(self.get_header('Transfer-Encoding'))
+            else:
+                self._transfer_encoding = 'identity'
         return self._transfer_encoding
 
     @property
@@ -195,8 +207,10 @@ class Response(object):
             return self.read_deflate()
         elif self.transfer_encoding == 'gzip':
             return self.read_gzip()
-        else:
+        elif self.transfer_encoding == 'identity':
             return self.read_identity()
+        else:
+            raise TransferEncodingException(self.transfer_encoding)
 
     async def read_chunks(self):
         content = b''
@@ -239,6 +253,10 @@ class Response(object):
                 content = zlib.decompress(content)
             elif self.content_encoding == 'gzip':
                 content = gzip.decompress(content)
+            elif self.content_encoding == 'identity':
+                pass
+            else:
+                raise ContentEncodingException(self.content_encoding)
             self._content = content
         return self._content
 
