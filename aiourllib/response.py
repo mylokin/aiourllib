@@ -2,6 +2,7 @@ import asyncio
 import collections
 import json
 import re
+import zlib
 
 from . import utils
 
@@ -91,10 +92,12 @@ class Response(object):
         self.headers = headers
 
         self._status_code = None
+        self._content_encoding = None
         self._content_length = None
         self._content_type = self.CONTENT_TYPE
         self._charset = self.CHARSET
         self._cache_control = None
+        self._transfer_encoding = None
 
         self._content = None
 
@@ -116,6 +119,26 @@ class Response(object):
             self._content_type = \
                 utils.smart_text(self.get_header('Content-Type'))
         return self._content_type
+
+    @property
+    def content_encoding(self):
+        if (not self._content_encoding):
+            if self.has_header('Content-Encoding'):
+                self._content_encoding = \
+                    utils.smart_text(self.get_header('Content-Encoding'))
+            else:
+                self._content_encoding = 'identity'
+        return self._content_encoding
+
+    @property
+    def transfer_encoding(self):
+        if (
+            (not self._transfer_encoding) and
+            self.has_header('Transfer-Encoding')
+        ):
+            self._transfer_encoding = \
+                utils.smart_text(self.get_header('Transfer-Encoding'))
+        return self._transfer_encoding
 
     @property
     def charset(self):
@@ -165,10 +188,12 @@ class Response(object):
             self.headers[header] = value
 
     def read(self):
-        if self.get_header('Transfer-Encoding') == 'chunked':
+        if self.transfer_encoding == 'chunked':
             return self.read_chunks()
+        elif self.transfer_encoding == 'deflate':
+            return self.read_deflate()
         else:
-            return self.read_default()
+            return self.read_identity()
 
     async def read_chunks(self):
         content = b''
@@ -188,7 +213,11 @@ class Response(object):
 
         return content
 
-    async def read_default(self):
+    async def read_deflate(self):
+        content = await self.read_default()
+        return zlib.decompress(content)
+
+    async def read_identity(self):
         content = b''
         while len(content) < self.content_length:
             r = (await self.reader.read(self.content_length - len(content)))
@@ -200,7 +229,10 @@ class Response(object):
 
     async def read_content(self):
         if not self._content:
-            self._content = await self.read()
+            content = await self.read()
+            if self.content_encoding == 'deflate':
+                content = zlib.decompress(content)
+            self._content = content
         return self._content
 
     async def read_text(self):
