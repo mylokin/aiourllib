@@ -106,14 +106,15 @@ class Response(object):
 
     @property
     def content_length(self):
-        if (not self._content_length) and ('Content-Length' in self.headers):
-            self._content_length = int(self.headers['Content-Length'])
+        if (not self._content_length) and self.has_header('Content-Length'):
+            self._content_length = int(self.get_header('Content-Length'))
         return self._content_length
 
     @property
     def content_type(self):
-        if (not self._content_type) and ('Content-Type' in self.headers):
-            self._content_type = utils.smart_text(self.headers['Content-Type'])
+        if (not self._content_type) and self.has_header('Content-Type'):
+            self._content_type = \
+                utils.smart_text(self.get_header('Content-Type'))
         return self._content_type
 
     @property
@@ -125,9 +126,9 @@ class Response(object):
 
     @property
     def cache_control(self):
-        if (not self._cache_control) and ('Cache-Control' in self.headers):
+        if (not self._cache_control) and self.has_header('Cache-Control'):
             self._cache_control = self.PROTOCOL.parse_cache_control(
-                self.headers['Cache-Control'])
+                self.get_header('Cache-Control'))
         return self._cache_control
 
     def get_header(self, header):
@@ -135,6 +136,11 @@ class Response(object):
         header = header.lower()
         if header in mapping:
             return self.headers[mapping[header]]
+
+    def has_header(self, header):
+        mapping = {h.lower(): h for h in self.headers}
+        header = header.lower()
+        return header in mapping
 
     async def read_headers(self):
         status = (await self.reader.readline()).strip()
@@ -159,8 +165,7 @@ class Response(object):
             self.headers[header] = value
 
     def read(self):
-        print(self.get_header('Transfer-Encoding'))
-        if self.get_header('Transfer-Encoding') == 'chuncked':
+        if self.get_header('Transfer-Encoding') == 'chunked':
             return self.read_chunks()
         else:
             return self.read_default()
