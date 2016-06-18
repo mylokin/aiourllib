@@ -1,3 +1,6 @@
-__all__ = ['get']
+__all__ = ['get', 'URI', 'URIException']
 
 from .api import get
+from .uri import (
+    URI,
+    URIException)

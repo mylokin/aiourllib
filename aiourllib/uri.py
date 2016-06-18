@@ -1,3 +1,4 @@
+''' rfc 3986 implementation '''
 __all__ = [
     'URI',
     'URIFabric',

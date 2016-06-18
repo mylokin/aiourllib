@@ -1,6 +1,6 @@
 import unittest
 
-from aiourllib.rfc2396 import (
+from aiourllib.uri import (
     URIFabric,
     SchemeException,
     RelSegmentException,
