@@ -1,7 +1,7 @@
 import collections
 
 from . import (
-    rfc2396,
+    uri,
     rfc2161,
 )
 
@@ -14,7 +14,7 @@ class Request(object):
 
     def __init__(self, method, url, headers=None):
         self.method = method
-        self.url = rfc2396.URIFabric.from_string(url)
+        self.url = uri.URIFabric.from_string(url)
 
         path = self.url.abs_path
         if self.url.query:
