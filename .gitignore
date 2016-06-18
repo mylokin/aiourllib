@@ -89,4 +89,4 @@ ENV/
 .ropeproject
 
 # Sublime Text 3 settings
-*.sublime-*
+aiourllib.sublime-*
