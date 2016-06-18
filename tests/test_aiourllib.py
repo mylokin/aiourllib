@@ -14,21 +14,23 @@ class HttpbinTestCase(unittest.TestCase):
     def tearDownClass(cls):
         cls.loop.close()
 
-    async def read(self, url):
-        with contextlib.closing(await aiourllib.get(url)) as response:
+    async def read(self, request):
+        with contextlib.closing(await request) as response:
             return await response.read_content()
 
-    async def read_json(self, url):
-        with contextlib.closing(await aiourllib.get(url)) as response:
+    async def read_json(self, request):
+        with contextlib.closing(await request) as response:
             return await response.read_json()
 
     def fetch(self, url):
+        request = aiourllib.get(url)
         return self.loop.run_until_complete(
-            self.read(url))
+            self.read(request))
 
-    def fetch_json(self, url):
+    def fetch_json(self, url, read_timeout=66):
+        request = aiourllib.get(url, read_timeout=read_timeout)
         return self.loop.run_until_complete(
-            self.read_json(url))
+            self.read_json(request))
 
     def test_ip(self):
         self.fetch_json('https://httpbin.org/ip')
@@ -55,7 +57,8 @@ class HttpbinTestCase(unittest.TestCase):
         self.fetch('https://httpbin.org/stream/20')
 
     def test_delay(self):
-        self.fetch_json('https://httpbin.org/delay/3')
+        with self.assertRaises(aiourllib.exc.ReadTimeout):
+            self.fetch_json('https://httpbin.org/delay/5', 1.)
 
     def test_xml(self):
         self.fetch('https://httpbin.org/xml')

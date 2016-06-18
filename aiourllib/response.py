@@ -5,7 +5,9 @@ import re
 import gzip
 import zlib
 
-from . import utils
+from . import (
+    exc,
+    utils)
 
 
 class ResponseException(Exception):
@@ -177,14 +179,23 @@ class Response(object):
         header = header.lower()
         return header in mapping
 
+    async def read_coro(self, coro):
+        try:
+            return await asyncio.wait_for(coro, self.connection.read_timeout)
+        except asyncio.TimeoutError:
+            raise exc.ReadTimeout
+
     async def read_headers(self):
-        status = (await self.connection.reader.readline()).strip()
+        coro = self.connection.reader.readline()
+        status = (await self.read_coro(coro)).strip()
+
         status = utils.smart_text(status, 'latin-1')
         self.status = self.PROTOCOL.parse_status(status)
 
         self.headers = collections.OrderedDict()
         while True:
-            line = (await self.connection.reader.readline()).strip()
+            coro = self.connection.reader.readline()
+            line = (await self.read_coro(coro)).strip()
             line = utils.smart_text(line, 'latin-1')
             if not line:
                 break
@@ -214,18 +225,21 @@ class Response(object):
     async def read_chunks(self):
         content = b''
         while True:
-            chunk_size = await self.connection.reader.readline()
+            coro = self.connection.reader.readline()
+            chunk_size = await self.read_coro(coro)
             chunk_size = chunk_size.strip()
             if not chunk_size:
                 break
 
             chunk_size = int(chunk_size, base=16)
-            r = await self.connection.reader.readexactly(chunk_size)
+            coro = self.connection.reader.readexactly(chunk_size)
+            r = await self.read_coro(coro)
             if not r:
                 break
 
             content += r
-            await self.connection.reader.readline()
+            coro = self.connection.reader.readline()
+            await self.read_coro(coro)
 
         return content
 
@@ -239,7 +253,10 @@ class Response(object):
         content = b''
         while len(content) < self.content_length:
             chunk_size = self.content_length - len(content)
-            r = await self.connection.reader.read(chunk_size)
+
+            coro = self.connection.reader.read(chunk_size)
+            r = await self.read_coro(coro)
+
             if r:
                 content += r
             else:

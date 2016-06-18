@@ -1,7 +1,9 @@
 import asyncio
 import urllib.parse
 
-from . import models
+from . import (
+    exc,
+    models)
 from .response import Response
 from .request import Request
 
@@ -30,7 +32,11 @@ async def connect(
         ssl=ssl,
         loop=loop,
     )
-    reader, writer = await conn
+    try:
+        reader, writer = await asyncio.wait_for(conn, connection_timeout)
+    except asyncio.TimeoutError:
+        raise exc.ConnectionTimeout
+
     return models.Connection(
         url,
         reader,
