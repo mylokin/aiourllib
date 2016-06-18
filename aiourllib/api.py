@@ -12,7 +12,12 @@ async def read(connection):
     return response
 
 
-async def connect(url, loop=None):
+async def connect(
+    url,
+    connection_timeout=None,
+    read_timeout=None,
+    loop=None,
+):
     pr = urllib.parse.urlsplit(url)
     if pr.scheme == 'https':
         port, ssl = 443, True
@@ -26,13 +31,32 @@ async def connect(url, loop=None):
         loop=loop,
     )
     reader, writer = await conn
-    return models.Connection(url, reader, writer)
+    return models.Connection(
+        url,
+        reader,
+        writer,
+        connection_timeout,
+        read_timeout,
+    )
 
 
-async def get(url, headers=None, loop=None):
-    conn = await connect(url, loop=loop)
-
-    request = str(Request('get', url, headers=headers)).encode('latin-1')
+async def get(
+    url,
+    headers=None,
+    connection_timeout=None,
+    read_timeout=None,
+    loop=None,
+):
+    conn = await connect(
+        url,
+        connection_timeout=connection_timeout,
+        read_timeout=read_timeout,
+        loop=loop)
+    request = Request(
+        'get',
+        url,
+        headers=headers)
+    request = str(request).encode('latin-1')
     conn.writer.write(request)
 
     return (await read(conn))

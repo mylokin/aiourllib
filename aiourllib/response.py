@@ -98,8 +98,7 @@ class Response(object):
         status=None,
         headers=None,
     ):
-        self.reader = connection.reader
-        self.writer = connection.writer
+        self.connection = connection
 
         self.status = status
         self.headers = headers
@@ -179,13 +178,13 @@ class Response(object):
         return header in mapping
 
     async def read_headers(self):
-        status = (await self.reader.readline()).strip()
+        status = (await self.connection.reader.readline()).strip()
         status = utils.smart_text(status, 'latin-1')
         self.status = self.PROTOCOL.parse_status(status)
 
         self.headers = collections.OrderedDict()
         while True:
-            line = (await self.reader.readline()).strip()
+            line = (await self.connection.reader.readline()).strip()
             line = utils.smart_text(line, 'latin-1')
             if not line:
                 break
@@ -215,18 +214,18 @@ class Response(object):
     async def read_chunks(self):
         content = b''
         while True:
-            chunk_size = await self.reader.readline()
+            chunk_size = await self.connection.reader.readline()
             chunk_size = chunk_size.strip()
             if not chunk_size:
                 break
 
             chunk_size = int(chunk_size, base=16)
-            r = await self.reader.readexactly(chunk_size)
+            r = await self.connection.reader.readexactly(chunk_size)
             if not r:
                 break
 
             content += r
-            await self.reader.readline()
+            await self.connection.reader.readline()
 
         return content
 
@@ -239,7 +238,8 @@ class Response(object):
     async def read_identity(self):
         content = b''
         while len(content) < self.content_length:
-            r = (await self.reader.read(self.content_length - len(content)))
+            chunk_size = self.content_length - len(content)
+            r = await self.connection.reader.read(chunk_size)
             if r:
                 content += r
             else:
@@ -269,4 +269,4 @@ class Response(object):
         return json.loads(content)
 
     def close(self):
-        self.writer.close()
+        self.connection.writer.close()
