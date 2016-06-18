@@ -14,10 +14,10 @@ class HttpbinTestCase(unittest.TestCase):
 
     async def read(self, url):
         with contextlib.closing(await aiourllib.get(url)) as response:
-            return await response.read_string()
+            return await response.read_content()
 
     def fetch(self, url):
         return self.loop.run_until_complete(asyncio.async(self.read(url)))
 
     def test_httpbin(self):
-        self.assertEqual(self.fetch('https://httpbin.org'), 'ff')
+        self.assertIsNotNone(self.fetch('https://httpbin.org'))

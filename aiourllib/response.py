@@ -11,13 +11,17 @@ class Protocol(object):
     HTTP = 'HTTP/'
 
     REGEX_CHARSET = re.compile(r';\s*charset=([^;]*)', re.I)
-    REGEX_TOKEN = re.compile(r'([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|([^ \t",;]*)))?')
+    REGEX_TOKEN = re.compile(
+        r'([a-zA-Z][a-zA-Z_-]*)\s*(?:=(?:"([^"]*)"|'
+        r'([^ \t",;]*)))?')
 
     @classmethod
     def parse_status(cls, status):
         if status.startswith(cls.HTTP):
             http_version, status_code, status_text = status.split(None, 2)
-            status = '{} {}'.format(utils.smart_text(status_code), utils.smart_text(status_text))
+            status = '{} {}'.format(
+                utils.smart_text(status_code),
+                utils.smart_text(status_text))
         return status
 
     @classmethod
@@ -115,13 +119,15 @@ class Response(object):
     @property
     def charset(self):
         if (not self._charset) and self.content_type:
-            self._charset = self.PROTOCOL.parse_charset(self.content_type, self._charset)
+            self._charset = self.PROTOCOL.parse_charset(
+                self.content_type, self._charset)
         return self._charset
 
     @property
     def cache_control(self):
         if (not self._cache_control) and ('Cache-Control' in self.headers):
-            self._cache_control = self.PROTOCOL.parse_cache_control(self.headers['Cache-Control'])
+            self._cache_control = self.PROTOCOL.parse_cache_control(
+                self.headers['Cache-Control'])
         return self._cache_control
 
     def get_header(self, header):
@@ -145,7 +151,8 @@ class Response(object):
             try:
                 header, value = line.split(self.PROTOCOL.COLON, 1)
             except ValueError:
-                raise ValueError('Bad header line: {}'.format(utils.smart_text(line)))
+                raise ValueError('Bad header line: {}'.format(
+                    utils.smart_text(line)))
 
             header = utils.smart_text(header.strip(), 'latin-1')
             value = utils.smart_text(value.strip(), 'latin-1')

@@ -2,8 +2,8 @@ import collections
 
 from . import (
     uri,
-    rfc2161,
-)
+    rfc2161)
+
 
 class Protocol(object):
     HTTP_VERSION = 1.1
@@ -33,7 +33,8 @@ class Request(object):
 
     @property
     def header_fields(self):
-        return '\r\n'.join('{}: {}'.format(h, v) for h, v in self.headers.items())
+        return '\r\n'.join(
+            '{}: {}'.format(h, v) for h, v in self.headers.items())
 
     def __str__(self):
         return (

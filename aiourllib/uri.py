@@ -1,11 +1,11 @@
 ''' rfc 3986 implementation '''
+import string
+
 __all__ = [
     'URI',
     'URIFabric',
     'URIException',
 ]
-
-import string
 
 
 class URIException(Exception):
@@ -317,37 +317,44 @@ class URIFabric(object):
     @classmethod
     def from_string(cls, source):
         data = {}
-        data['scheme'], scheme_specific_part = cls.PROTOCOL.process_scheme(source)
+        data['scheme'], scheme_specific_part = \
+            cls.PROTOCOL.process_scheme(source)
         data['fragment'], scheme_specific_part = \
             cls.PROTOCOL.process_fragment(scheme_specific_part)
 
         if data['scheme']:
             if scheme_specific_part.startswith('//'):
                 # hier_part(net_path)
-                data.update(cls.PROTOCOL.provide_net_path(scheme_specific_part))
+                data.update(
+                    cls.PROTOCOL.provide_net_path(scheme_specific_part))
                 fields = cls.FIELDS_NET_PATH
             elif scheme_specific_part.startswith('/'):
                 # hier_part(abs_path)
-                data.update(cls.PROTOCOL.provide_abs_path(scheme_specific_part))
+                data.update(
+                    cls.PROTOCOL.provide_abs_path(scheme_specific_part))
                 fields = cls.FIELDS_ABS_PATH
             elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
                 # opaque_part
-                data.update(cls.PROTOCOL.provide_opaque_part(scheme_specific_part))
+                data.update(
+                    cls.PROTOCOL.provide_opaque_part(scheme_specific_part))
                 fields = cls.FIELDS_OPAQUE_PART
             else:
                 raise URIException(source)
         else:
             if scheme_specific_part.startswith('//'):
                 # net_path
-                data.update(cls.PROTOCOL.provide_net_path(scheme_specific_part))
+                data.update(
+                    cls.PROTOCOL.provide_net_path(scheme_specific_part))
                 fields = cls.FIELDS_NET_PATH
             elif scheme_specific_part.startswith('/'):
                 # abs_path
-                data.update(cls.PROTOCOL.provide_abs_path(scheme_specific_part))
+                data.update(
+                    cls.PROTOCOL.provide_abs_path(scheme_specific_part))
                 fields = cls.FIELDS_ABS_PATH
             else:
                 # rel_path
-                data.update(cls.PROTOCOL.provide_rel_path(scheme_specific_part))
+                data.update(
+                    cls.PROTOCOL.provide_rel_path(scheme_specific_part))
                 fields = cls.FIELDS_REL_PATH
 
         return URI(**{f: data[f] for f in fields})
@@ -426,7 +433,8 @@ class URI(object):
             elif self.host:
                 self.hostname = self.host
                 self.toplabel = self.PROTOCOL.parse_toplabel(self.hostname)
-                self.domainlabels = self.PROTOCOL.parse_domainlabels(self.hostname)
+                self.domainlabels = \
+                    self.PROTOCOL.parse_domainlabels(self.hostname)
 
             if self.port:
                 self.hostport = '{}:{}'.format(self.hostport, self.port)
