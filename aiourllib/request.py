@@ -17,8 +17,6 @@ class Request(object):
         self.url = rfc2396.URIFabric.from_string(url)
 
         path = self.url.abs_path
-        if not path.endswith('/'):
-            path = '{}/'.format(path)
         if self.url.query:
             path = '{}?{}'.format(path, self.url.query)
         self.path = path

@@ -124,6 +124,12 @@ class Response(object):
             self._cache_control = self.PROTOCOL.parse_cache_control(self.headers['Cache-Control'])
         return self._cache_control
 
+    def get_header(self, header):
+        mapping = {h.lower(): h for h in self.headers}
+        header = header.lower()
+        if header in mapping:
+            return self.headers[mapping[header]]
+
     async def read_headers(self):
         status = (await self.reader.readline()).strip()
         status = utils.smart_text(status, 'latin-1')
@@ -145,6 +151,13 @@ class Response(object):
             value = utils.smart_text(value.strip(), 'latin-1')
             self.headers[header] = value
 
+    def read(self):
+        print(self.get_header('Transfer-Encoding'))
+        if self.get_header('Transfer-Encoding') == 'chuncked':
+            return self.read_chunks()
+        else:
+            return self.read_default()
+
     async def read_chunks(self):
         content = b''
         while True:
@@ -163,9 +176,19 @@ class Response(object):
 
         return content
 
+    async def read_default(self):
+        content = b''
+        while len(content) < self.content_length:
+            r = (await self.reader.read(self.content_length - len(content)))
+            if r:
+                content += r
+            else:
+                break
+        return content
+
     async def read_content(self):
         if not self._content:
-            self._content = await self.read_chunks()
+            self._content = await self.read()
         return self._content
 
     async def read_text(self):
