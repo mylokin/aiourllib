@@ -1,6 +1,10 @@
 import unittest
 
-from aiourllib.rfc2396 import URIFabric
+from aiourllib.rfc2396 import (
+    URIFabric,
+    SchemeException,
+    RelSegmentException,
+)
 
 
 class TestURI(unittest.TestCase):
