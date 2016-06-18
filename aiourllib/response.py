@@ -2,6 +2,7 @@ import asyncio
 import collections
 import json
 import re
+import gzip
 import zlib
 
 from . import utils
@@ -192,6 +193,8 @@ class Response(object):
             return self.read_chunks()
         elif self.transfer_encoding == 'deflate':
             return self.read_deflate()
+        elif self.transfer_encoding == 'gzip':
+            return self.read_gzip()
         else:
             return self.read_identity()
 
@@ -214,8 +217,10 @@ class Response(object):
         return content
 
     async def read_deflate(self):
-        content = await self.read_default()
-        return zlib.decompress(content)
+        return zlib.decompress(await self.read_identity())
+
+    async def read_gzip(self):
+        return gzip.decompress(await self.read_identity())
 
     async def read_identity(self):
         content = b''
@@ -232,6 +237,8 @@ class Response(object):
             content = await self.read()
             if self.content_encoding == 'deflate':
                 content = zlib.decompress(content)
+            elif self.content_encoding == 'gzip':
+                content = gzip.decompress(content)
             self._content = content
         return self._content
 
