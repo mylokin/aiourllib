@@ -53,13 +53,14 @@ class Protocol(object):
     ALPHANUM = ALPHA + DIGIT
 
     MARK = '-' '_' '.' '!' '~' '*' '\'' '(' ')'
-
-    UNRESERVED = ALPHANUM + MARK
+    UNRESERVED = ALPHANUM + '-' '.' '_' '~'
 
     HEX = string.hexdigits
     ESCAPED = '%' + HEX
 
-    RESERVED = ';' '/' '?' ':' '@' '&' '=' '+' '$' ',' '[' ']'
+    GEN_DELIMS = ':' '/' '?' '#' '[' ']' '@'
+    SUB_DELIMS = '!' '$' '&' '\'' '(' ')' '*' '+' ',' ';' '='
+    RESERVED = GEN_DELIMS + SUB_DELIMS
 
     URIC = RESERVED + UNRESERVED + ESCAPED
     URIC_NO_SLASH = UNRESERVED + ESCAPED + ';' '?' ':' '@' '&' '=' '+' '$' ','
@@ -137,7 +138,10 @@ class Protocol(object):
 
     @classmethod
     def parse_host_port(cls, authority):
-        if ':' in authority:
+        if authority.startswith('[') and authority.endswith(']'):
+            host = authority
+            port = None
+        elif ':' in authority:
             host, port = authority.rsplit(':', 1)
             if port.isdigit():
                 port = int(port)
@@ -257,9 +261,6 @@ class Protocol(object):
     @classmethod
     def provide_rel_path(cls, scheme_specific_part):
         data = {}
-        data['query'], scheme_specific_part = \
-            cls.process_query(scheme_specific_part)
-
         data['rel_segment'], scheme_specific_part = \
             cls.process_rel_segment(scheme_specific_part)
 
@@ -278,8 +279,6 @@ class Protocol(object):
             cls.process_authority(scheme_specific_part)
 
         data.update(cls.parse_authority(data['authority']))
-        data['query'], scheme_specific_part = \
-            cls.process_query(scheme_specific_part)
 
         if scheme_specific_part:
             data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
@@ -290,9 +289,6 @@ class Protocol(object):
     @classmethod
     def provide_abs_path(cls, scheme_specific_part):
         data = {}
-        data['query'], scheme_specific_part = \
-            cls.process_query(scheme_specific_part)
-
         if scheme_specific_part:
             data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
         else:
@@ -321,6 +317,8 @@ class URIFabric(object):
             cls.PROTOCOL.process_scheme(source)
         data['fragment'], scheme_specific_part = \
             cls.PROTOCOL.process_fragment(scheme_specific_part)
+        data['query'], scheme_specific_part = \
+            cls.PROTOCOL.process_query(scheme_specific_part)
 
         if data['scheme']:
             if scheme_specific_part.startswith('//'):
