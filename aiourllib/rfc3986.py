@@ -18,6 +18,8 @@ class Protocol(object):
     QUERY = PCHAR + '/' '?'
     FRAGMENT = PCHAR + '/' '?'
 
+    SEGMENT = PCHAR
+
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
@@ -54,13 +56,11 @@ class Protocol(object):
         return query, hier_part
 
     @classmethod
-    def strip_authority(cls, hier_part):
-
-
-    @classmethod
-    def process_hier_part(cls, hier_part):
-        if hier_part.startswith('//'):
-            # authority path-abempty
-            pass
-        elif:
-            pass
+    def process(cls, uri_reference):
+        scheme, hier_part = cls.strip_scheme(uri_reference)
+        if scheme:
+            # hier_part
+            fragment, hier_part = cls.strip_fragment(hier_part)
+            query, hier_part = cls.strip_query(hier_part)
+        else:
+            relative_ref = hier_part
