@@ -18,8 +18,6 @@ class Protocol(object):
     QUERY = PCHAR + '/' '?'
     FRAGMENT = PCHAR + '/' '?'
 
-    SEGMENT = PCHAR
-
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
