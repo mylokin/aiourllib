@@ -197,10 +197,10 @@ class Protocol(object):
     @classmethod
     def process(cls, uri_reference):
         scheme, hier_part = cls.strip_scheme(uri_reference)
+        fragment, hier_part = cls.strip_fragment(hier_part)
+        query, hier_part = cls.strip_query(hier_part)
         if scheme:
             # hier_part
-            fragment, hier_part = cls.strip_fragment(hier_part)
-            query, hier_part = cls.strip_query(hier_part)
             if hier_part.startswith('//'):
                 # authority
                 authority, hier_part = cls.strip_authority(hier_part)
@@ -231,4 +231,33 @@ class Protocol(object):
                 raise PathException(hier_part)
 
         else:
+            # relative_ref
             relative_ref = hier_part
+            if relative_ref.startswith('//'):
+                # authority
+                authority, relative_ref = cls.strip_authority(relative_ref)
+                userinfo, authority = cls.strip_userinfo(authority)
+                port, authority = cls.strip_port(authority)
+                host = authority
+                if cls.verify_ipv6_address(host):
+                    ipv6_address = host
+                elif cls.verify_ipv4_address(host):
+                    ipv4_address = host
+                elif cls.verify_reg_name(host):
+                    reg_name = host
+                else:
+                    raise AuthorityException(host)
+
+                if cls.verify_path_abempty(relative_ref):
+                    path_abempty = relative_ref
+                else:
+                    raise PathException(relative_ref)
+
+            elif cls.verify_path_absolute(relative_ref):
+                path_absolute = relative_ref
+            elif cls.verify_path_noscheme(relative_ref):
+                path_noscheme = relative_ref
+            elif cls.verify_path_empty(relative_ref):
+                path_empty = relative_ref
+            else:
+                raise PathException(relative_ref)
