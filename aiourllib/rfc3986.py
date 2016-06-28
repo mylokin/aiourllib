@@ -21,6 +21,9 @@ class Protocol(object):
     # Authority
     USERINFO = UNRESERVED + PCT_ENCODED + SUB_DELIMS + ':'
     PORT = DIGIT
+
+    # Host
+    REG_NAME = UNRESERVED + PCT_ENCODED + SUB_DELIMS
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
@@ -91,6 +94,13 @@ class Protocol(object):
         return port, authority
 
     @classmethod
+    def verify_ipv4_address(cls, host):
+        host = host.split('.')
+        ipv4 = all(n and n.isdigit() and not n.startswith('0') and
+            int(n) <= 255 for n in host)
+        return len(host) == 4 and ipv4:
+
+    @classmethod
     def process(cls, uri_reference):
         scheme, hier_part = cls.strip_scheme(uri_reference)
         if scheme:
@@ -102,6 +112,10 @@ class Protocol(object):
                 authority, hier_part = cls.strip_authority(hier_part)
                 userinfo, authority = cls.strip_userinfo(authority)
                 port, authority = cls.strip_port(authority)
+                host = authority
+                if cls.verify_ipv4_address(host):
+                    ipv4_address = host
+                path_abempty = hier_part
             elif no hier_part:
                 path_empty = ''
         else:
