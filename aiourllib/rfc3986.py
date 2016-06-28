@@ -143,7 +143,19 @@ class Protocol(object):
 
     @classmethod
     def verify_path_absolute(cls, path):
-        raise NotImplementedError
+        if not path.startswith('/'):
+            return False
+
+        segments = path.split('/')[1:]
+        segment = segments[0]
+        if not segment:
+            return False
+
+        for segment in segments[1:]:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
+        else:
+            return True
 
     @classmethod
     def verify_path_rootless(cls, path):
