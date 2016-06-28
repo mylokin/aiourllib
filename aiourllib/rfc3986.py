@@ -226,70 +226,93 @@ class Protocol(object):
     def verify_path_empty(cls, path):
         return bool(path)
 
-    @classmethod
-    def process(cls, uri_reference):
-        scheme, hier_part = cls.strip_scheme(uri_reference)
-        fragment, hier_part = cls.strip_fragment(hier_part)
-        query, hier_part = cls.strip_query(hier_part)
-        if scheme:
-            # hier_part
-            if hier_part.startswith('//'):
-                # authority
-                authority, hier_part = cls.strip_authority(hier_part)
-                userinfo, authority = cls.strip_userinfo(authority)
-                port, authority = cls.strip_port(authority)
-                host = authority
-                if cls.verify_ipv6_address(host):
-                    ipv6_address = host
-                elif cls.verify_ipv4_address(host):
-                    ipv4_address = host
-                elif cls.verify_reg_name(host):
-                    reg_name = host
-                else:
-                    raise AuthorityException(host)
 
-                if cls.verify_path_abempty(hier_part):
-                    path_abempty = hier_part
-                else:
-                    raise PathException(hier_part)
+class URI(object):
+    def __init__(
+        self,
+        scheme=None,
+        authority=None,
+        path=None,
+        query=None,
+        fragment=None,
+    ):
+        self.scheme = scheme
+        self.authority = authority
+        self.path = path
+        self.query = query
+        self.fragment = fragment
 
-            elif cls.verify_path_absolute(hier_part):
-                path_absolute = hier_part
-            elif cls.verify_path_rootless(hier_part):
-                path_rootless = hier_part
-            elif cls.verify_path_empty(hier_part):
-                path_empty = hier_part
+    def __str__(self):
+        return to_string(self)
+
+
+def from_string(uri_reference):
+    scheme, hier_part = Protocol.strip_scheme(uri_reference)
+    fragment, hier_part = Protocol.strip_fragment(hier_part)
+    query, hier_part = Protocol.strip_query(hier_part)
+    if scheme:
+        # hier_part
+        if hier_part.startswith('//'):
+            # authority
+            authority, hier_part = Protocol.strip_authority(hier_part)
+            userinfo, authority = Protocol.strip_userinfo(authority)
+            port, authority = Protocol.strip_port(authority)
+            host = authority
+            if Protocol.verify_ipv6_address(host):
+                ipv6_address = host
+            elif Protocol.verify_ipv4_address(host):
+                ipv4_address = host
+            elif Protocol.verify_reg_name(host):
+                reg_name = host
+            else:
+                raise AuthorityException(host)
+
+            if Protocol.verify_path_abempty(hier_part):
+                path_abempty = hier_part
             else:
                 raise PathException(hier_part)
 
+        elif Protocol.verify_path_absolute(hier_part):
+            path_absolute = hier_part
+        elif Protocol.verify_path_rootless(hier_part):
+            path_rootless = hier_part
+        elif Protocol.verify_path_empty(hier_part):
+            path_empty = hier_part
         else:
-            # relative_ref
-            relative_ref = hier_part
-            if relative_ref.startswith('//'):
-                # authority
-                authority, relative_ref = cls.strip_authority(relative_ref)
-                userinfo, authority = cls.strip_userinfo(authority)
-                port, authority = cls.strip_port(authority)
-                host = authority
-                if cls.verify_ipv6_address(host):
-                    ipv6_address = host
-                elif cls.verify_ipv4_address(host):
-                    ipv4_address = host
-                elif cls.verify_reg_name(host):
-                    reg_name = host
-                else:
-                    raise AuthorityException(host)
+            raise PathException(hier_part)
 
-                if cls.verify_path_abempty(relative_ref):
-                    path_abempty = relative_ref
-                else:
-                    raise PathException(relative_ref)
+    else:
+        # relative_ref
+        relative_ref = hier_part
+        if relative_ref.startswith('//'):
+            # authority
+            authority, relative_ref = Protocol.strip_authority(relative_ref)
+            userinfo, authority = Protocol.strip_userinfo(authority)
+            port, authority = Protocol.strip_port(authority)
+            host = authority
+            if Protocol.verify_ipv6_address(host):
+                ipv6_address = host
+            elif Protocol.verify_ipv4_address(host):
+                ipv4_address = host
+            elif Protocol.verify_reg_name(host):
+                reg_name = host
+            else:
+                raise AuthorityException(host)
 
-            elif cls.verify_path_absolute(relative_ref):
-                path_absolute = relative_ref
-            elif cls.verify_path_noscheme(relative_ref):
-                path_noscheme = relative_ref
-            elif cls.verify_path_empty(relative_ref):
-                path_empty = relative_ref
+            if Protocol.verify_path_abempty(relative_ref):
+                path_abempty = relative_ref
             else:
                 raise PathException(relative_ref)
+
+        elif Protocol.verify_path_absolute(relative_ref):
+            path_absolute = relative_ref
+        elif Protocol.verify_path_noscheme(relative_ref):
+            path_noscheme = relative_ref
+        elif Protocol.verify_path_empty(relative_ref):
+            path_empty = relative_ref
+        else:
+            raise PathException(relative_ref)
+
+
+def to_string(uri):
+    pass
