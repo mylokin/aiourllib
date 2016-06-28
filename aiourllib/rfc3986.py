@@ -20,6 +20,7 @@ class Protocol(object):
 
     # Authority
     USERINFO = UNRESERVED + PCT_ENCODED + SUB_DELIMS + ':'
+    PORT = DIGIT
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
@@ -80,6 +81,16 @@ class Protocol(object):
         return userinfo, authority
 
     @classmethod
+    def strip_port(cls, authority):
+        if ':' in authority:
+            authority, port = authority.rsplit(':', 1)
+        if port.isdigit():
+            port = int(port)
+        else:
+            raise PortException(port)
+        return port, authority
+
+    @classmethod
     def process(cls, uri_reference):
         scheme, hier_part = cls.strip_scheme(uri_reference)
         if scheme:
@@ -90,6 +101,7 @@ class Protocol(object):
                 # authority
                 authority, hier_part = cls.strip_authority(hier_part)
                 userinfo, authority = cls.strip_userinfo(authority)
+                port, authority = cls.strip_port(authority)
             elif no hier_part:
                 path_empty = ''
         else:
