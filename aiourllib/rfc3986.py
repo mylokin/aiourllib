@@ -60,5 +60,9 @@ class Protocol(object):
             # hier_part
             fragment, hier_part = cls.strip_fragment(hier_part)
             query, hier_part = cls.strip_query(hier_part)
+            if hier_part.startswith('//'):
+                pass
+            elif no hier_part:
+                path_empty = ''
         else:
             relative_ref = hier_part
