@@ -26,6 +26,9 @@ class Protocol(object):
     # Host
     REG_NAME = UNRESERVED + PCT_ENCODED + SUB_DELIMS
 
+    # Path
+    SEGMENT = PCHAR
+
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
@@ -124,6 +127,33 @@ class Protocol(object):
             return True
 
     @classmethod
+    def verify_path_abempty(cls, path):
+        if not path:
+            return True
+
+        if not path.startswith('/'):
+            return False
+
+        segments = path.split('/')
+        for segment in segments:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
+        else:
+            return True
+
+    @classmethod
+    def verify_path_absolute(cls, path):
+        raise NotImplementedError
+
+    @classmethod
+    def verify_path_rootless(cls, path):
+        raise NotImplementedError
+
+    @classmethod
+    def verify_path_empty(cls, path):
+        raise NotImplementedError
+
+    @classmethod
     def process(cls, uri_reference):
         scheme, hier_part = cls.strip_scheme(uri_reference)
         if scheme:
@@ -144,8 +174,20 @@ class Protocol(object):
                     reg_name = host
                 else:
                     raise AuthorityException(host)
-                path_abempty = hier_part
-            elif no hier_part:
-                path_empty = ''
+
+                if cls.verify_path_abempty(hier_part):
+                    path_abempty = hier_part
+                else:
+                    raise PathException(hier_part)
+
+            elif cls.verify_path_absolute(hier_part):
+                path_absolute = hier_part
+            elif cls.verify_path_rootless(hier_part):
+                path_rootless = hier_part
+            elif cls.verify_path_empty(hier_part):
+                path_empty = hier_part
+            else:
+                raise PathException(hier_part)
+
         else:
             relative_ref = hier_part
