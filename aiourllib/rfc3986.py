@@ -18,6 +18,8 @@ class Protocol(object):
     QUERY = PCHAR + '/' '?'
     FRAGMENT = PCHAR + '/' '?'
 
+    # Authority
+    USERINFO = UNRESERVED + PCT_ENCODED + SUB_DELIMS + ':'
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
@@ -66,6 +68,18 @@ class Protocol(object):
         return authority, hier_part
 
     @classmethod
+    def strip_userinfo(cls, authority):
+        if '@' in authority:
+            userinfo, authority = authority.split('@', 1)
+            if any(c not in cls.USERINFO for c in userinfo):
+                raise UserInfoException(userinfo)
+            if not userinfo:
+                userinfo = None
+        else:
+            userinfo = None
+        return userinfo, authority
+
+    @classmethod
     def process(cls, uri_reference):
         scheme, hier_part = cls.strip_scheme(uri_reference)
         if scheme:
@@ -75,6 +89,7 @@ class Protocol(object):
             if hier_part.startswith('//'):
                 # authority
                 authority, hier_part = cls.strip_authority(hier_part)
+                userinfo, authority = cls.strip_userinfo(authority)
             elif no hier_part:
                 path_empty = ''
         else:
