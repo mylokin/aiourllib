@@ -54,6 +54,18 @@ class Protocol(object):
         return query, hier_part
 
     @classmethod
+    def strip_authority(cls, hier_part):
+        if hier_part.startswith('//'):
+            hier_part = hier_part[2:]
+        if '/' in hier_part:
+            authority, hier_part = hier_part.split('/', 1)
+            hier_part = '/{}'.format(hier_part)
+        else:
+            authority = hier_part
+            hier_part = ''
+        return authority, hier_part
+
+    @classmethod
     def process(cls, uri_reference):
         scheme, hier_part = cls.strip_scheme(uri_reference)
         if scheme:
@@ -62,6 +74,7 @@ class Protocol(object):
             query, hier_part = cls.strip_query(hier_part)
             if hier_part.startswith('//'):
                 pass
+                authority, hier_part = cls.strip_authority(hier_part)
             elif no hier_part:
                 path_empty = ''
         else:
