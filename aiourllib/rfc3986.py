@@ -159,6 +159,22 @@ class Protocol(object):
             return True
 
     @classmethod
+    def verify_path_noscheme(cls, path):
+        if path.startswith('/'):
+            return False
+
+        segments = path.split('/')
+        segment = segments[0]
+        if not segment or any(c not in cls.SEGMENT_NZ_NC for c in segment):
+            return False
+
+        for segment in segments[1:]:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
+        else:
+            return True
+
+    @classmethod
     def verify_path_rootless(cls, path):
         if path.startswith('/'):
             return False
