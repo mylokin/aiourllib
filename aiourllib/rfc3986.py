@@ -1,4 +1,5 @@
 import string
+import ipaddress
 
 
 class Protocol(object):
@@ -24,6 +25,7 @@ class Protocol(object):
 
     # Host
     REG_NAME = UNRESERVED + PCT_ENCODED + SUB_DELIMS
+
     @classmethod
     def strip_scheme(cls, uri):
         if ':' not in uri:
@@ -94,11 +96,32 @@ class Protocol(object):
         return port, authority
 
     @classmethod
+    def verify_reg_name(cls, host):
+        return all(c in cls.REG_NAME for c in host)
+
+    @classmethod
     def verify_ipv4_address(cls, host):
-        host = host.split('.')
-        ipv4 = all(n and n.isdigit() and not n.startswith('0') and
-            int(n) <= 255 for n in host)
-        return len(host) == 4 and ipv4:
+        if '.' not in host:
+            return False
+
+        try:
+            ipaddress.IPv4Address(host)
+        except ipaddress.AddressValueError:
+            return False
+        else:
+            return True
+
+    @classmethod
+    def verify_ipv6_address(cls, host):
+        if ':' not in host:
+            return False
+
+        try:
+            ipaddress.IPv6Address(host)
+        except ipaddress.AddressValueError:
+            return False
+        else:
+            return True
 
     @classmethod
     def process(cls, uri_reference):
@@ -113,9 +136,11 @@ class Protocol(object):
                 userinfo, authority = cls.strip_userinfo(authority)
                 port, authority = cls.strip_port(authority)
                 host = authority
-                if cls.verify_ipv4_address(host):
+                if cls.verify_ipv6_address(host):
+                    ipv6_address = host
+                elif cls.verify_ipv4_address(host):
                     ipv4_address = host
-                elif all(c in cls.REG_NAME for c in host):
+                elif cls.verify_reg_name(host):
                     reg_name = host
                 else:
                     raise AuthorityException(host)
