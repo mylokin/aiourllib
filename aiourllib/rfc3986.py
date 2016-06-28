@@ -115,6 +115,10 @@ class Protocol(object):
                 host = authority
                 if cls.verify_ipv4_address(host):
                     ipv4_address = host
+                elif all(c in cls.REG_NAME for c in host):
+                    reg_name = host
+                else:
+                    raise AuthorityException(host)
                 path_abempty = hier_part
             elif no hier_part:
                 path_empty = ''
