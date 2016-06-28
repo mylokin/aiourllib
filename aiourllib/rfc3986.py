@@ -28,6 +28,7 @@ class Protocol(object):
 
     # Path
     SEGMENT = PCHAR
+    SEGMENT_NZ_NC = UNRESERVED + PCT_ENCODED + SUB_DELIMS + '@'
 
     @classmethod
     def strip_scheme(cls, uri):
@@ -148,7 +149,7 @@ class Protocol(object):
 
         segments = path.split('/')[1:]
         segment = segments[0]
-        if not segment:
+        if not segment or any(c not in cls.SEGMENT for c in segment):
             return False
 
         for segment in segments[1:]:
@@ -159,11 +160,23 @@ class Protocol(object):
 
     @classmethod
     def verify_path_rootless(cls, path):
-        raise NotImplementedError
+        if path.startswith('/'):
+            return False
+
+        segments = path.split('/')
+        segment = segments[0]
+        if not segment or any(c not in cls.SEGMENT for c in segment):
+            return False
+
+        for segment in segments[1:]:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
+        else:
+            return True
 
     @classmethod
     def verify_path_empty(cls, path):
-        raise NotImplementedError
+        return bool(path)
 
     @classmethod
     def process(cls, uri_reference):
