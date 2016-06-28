@@ -73,7 +73,7 @@ class Protocol(object):
             fragment, hier_part = cls.strip_fragment(hier_part)
             query, hier_part = cls.strip_query(hier_part)
             if hier_part.startswith('//'):
-                pass
+                # authority
                 authority, hier_part = cls.strip_authority(hier_part)
             elif no hier_part:
                 path_empty = ''
