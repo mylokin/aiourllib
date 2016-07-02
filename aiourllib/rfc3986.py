@@ -249,71 +249,76 @@ class URI(object):
 
 
 def from_string(uri_reference):
-    scheme, hier_part = Protocol.strip_scheme(uri_reference)
-    fragment, hier_part = Protocol.strip_fragment(hier_part)
-    query, hier_part = Protocol.strip_query(hier_part)
-    if scheme:
+    uri = {}
+    uri['scheme'], hier_part = Protocol.strip_scheme(uri_reference)
+    uri['fragment'], hier_part = Protocol.strip_fragment(hier_part)
+    uri['query'], hier_part = Protocol.strip_query(hier_part)
+    if uri['scheme']:
         # hier_part
         if hier_part.startswith('//'):
             # authority
             authority, hier_part = Protocol.strip_authority(hier_part)
-            userinfo, authority = Protocol.strip_userinfo(authority)
-            port, authority = Protocol.strip_port(authority)
-            host = authority
+            uri['authority'] = authority
+            uri['userinfo'], authority = Protocol.strip_userinfo(authority)
+            uri['port'], authority = Protocol.strip_port(authority)
+            host = uri['host'] = authority
             if Protocol.verify_ipv6_address(host):
-                ipv6_address = host
+                uri['ipv6_address'] = host
             elif Protocol.verify_ipv4_address(host):
-                ipv4_address = host
+                uri['ipv4_address'] = host
             elif Protocol.verify_reg_name(host):
-                reg_name = host
+                uri['reg_name'] = host
             else:
                 raise AuthorityException(host)
 
             if Protocol.verify_path_abempty(hier_part):
-                path_abempty = hier_part
+                uri['path'] = uri['path_abempty'] = hier_part
             else:
                 raise PathException(hier_part)
 
         elif Protocol.verify_path_absolute(hier_part):
-            path_absolute = hier_part
+            uri['path'] = uri['path_absolute'] = hier_part
         elif Protocol.verify_path_rootless(hier_part):
-            path_rootless = hier_part
+            uri['path'] = uri['path_rootless'] = hier_part
         elif Protocol.verify_path_empty(hier_part):
-            path_empty = hier_part
+            uri['path'] = uri['path_empty'] = hier_part
         else:
             raise PathException(hier_part)
 
     else:
         # relative_ref
-        relative_ref = hier_part
+        relative_ref = uri['relative_ref'] = hier_part
         if relative_ref.startswith('//'):
             # authority
             authority, relative_ref = Protocol.strip_authority(relative_ref)
-            userinfo, authority = Protocol.strip_userinfo(authority)
-            port, authority = Protocol.strip_port(authority)
-            host = authority
+            uri['authority'] = authority
+            uri['userinfo'], authority = Protocol.strip_userinfo(authority)
+            uri['port'], authority = Protocol.strip_port(authority)
+            host = uri['host'] = authority
             if Protocol.verify_ipv6_address(host):
-                ipv6_address = host
+                uri['ipv6_address'] = host
             elif Protocol.verify_ipv4_address(host):
-                ipv4_address = host
+                uri['ipv4_address'] = host
             elif Protocol.verify_reg_name(host):
-                reg_name = host
+                uri['reg_name'] = host
             else:
                 raise AuthorityException(host)
 
             if Protocol.verify_path_abempty(relative_ref):
-                path_abempty = relative_ref
+                uri['path'] = uri['path_abempty'] = relative_ref
             else:
                 raise PathException(relative_ref)
 
         elif Protocol.verify_path_absolute(relative_ref):
-            path_absolute = relative_ref
+            uri['path'] = uri['path_absolute'] = relative_ref
         elif Protocol.verify_path_noscheme(relative_ref):
-            path_noscheme = relative_ref
+            uri['path'] = uri['path_noscheme'] = relative_ref
         elif Protocol.verify_path_empty(relative_ref):
-            path_empty = relative_ref
+            uri['path'] = uri['path_empty'] = relative_ref
         else:
             raise PathException(relative_ref)
+
+    return {c: uri[c] for c in uri if uri[c] is not None}
 
 
 def to_string(uri):
@@ -323,7 +328,7 @@ def to_string(uri):
 def main():
     print(from_string('ftp://ftp.is.co.za/rfc/rfc1808.txt'))
     print(from_string('http://www.ietf.org/rfc/rfc2396.txt'))
-    print(from_string('ldap://[2001:db8::7]/c=GB?objectClass?one'))
+    # print(from_string('ldap://[2001:db8::7]/c=GB?objectClass?one'))
     print(from_string('mailto:John.Doe@example.com'))
     print(from_string('news:comp.infosystems.www.servers.unix'))
     print(from_string('tel:+1-816-555-1212'))
