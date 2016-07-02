@@ -125,6 +125,8 @@ class Protocol(object):
     def strip_port(cls, authority):
         if ':' in authority:
             authority, port = authority.rsplit(':', 1)
+        else:
+            return None, authority
         if port.isdigit():
             port = int(port)
         else:
