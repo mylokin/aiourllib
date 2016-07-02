@@ -318,3 +318,18 @@ def from_string(uri_reference):
 
 def to_string(uri):
     pass
+
+
+def main():
+    print(from_string('ftp://ftp.is.co.za/rfc/rfc1808.txt'))
+    print(from_string('http://www.ietf.org/rfc/rfc2396.txt'))
+    print(from_string('ldap://[2001:db8::7]/c=GB?objectClass?one'))
+    print(from_string('mailto:John.Doe@example.com'))
+    print(from_string('news:comp.infosystems.www.servers.unix'))
+    print(from_string('tel:+1-816-555-1212'))
+    print(from_string('telnet://192.0.2.16:80/'))
+    print(from_string('urn:oasis:names:specification:docbook:dtd:xml:4.1.2'))
+
+
+if __name__ == '__main__':
+    main()
