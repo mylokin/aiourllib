@@ -1,5 +1,6 @@
 import string
 import ipaddress
+import unittest
 
 
 class URIException(Exception):
@@ -343,21 +344,31 @@ def to_string(
     return uri_reference
 
 
-def main():
-    test = [
-        'ftp://ftp.is.co.za/rfc/rfc1808.txt',
-        'http://www.ietf.org/rfc/rfc2396.txt',
-        'mailto:John.Doe@example.com',
-        'news:comp.infosystems.www.servers.unix',
-        'tel:+1-816-555-1212',
-        'telnet://192.0.2.16:80/',
-        'urn:oasis:names:specification:docbook:dtd:xml:4.1.2',
-    ]
-    for uri_reference in test:
-        uri = from_string(uri_reference)
-        uri_reference_recomposition = to_string(**uri)
-        print(uri_reference, uri, uri_reference_recomposition)
-        assert uri_reference == uri_reference_recomposition
+class TestURI(unittest.TestCase):
+    def assertMatch(self, uri_reference):
+        self.assertEqual(to_string(**from_string(uri_reference)), uri_reference)
+
+    def test_ftp(self):
+        self.assertMatch('ftp://ftp.is.co.za/rfc/rfc1808.txt')
+
+    def test_http(self):
+        self.assertMatch('http://www.ietf.org/rfc/rfc2396.txt')
+
+    def test_mailto(self):
+        self.assertMatch('mailto:John.Doe@example.com')
+
+    def test_news(self):
+        self.assertMatch('news:comp.infosystems.www.servers.unix')
+
+    def test_tel(self):
+        self.assertMatch('tel:+1-816-555-1212')
+
+    def test_telnet(self):
+        self.assertMatch('telnet://192.0.2.16:80/')
+
+    def test_urn(self):
+        self.assertMatch('urn:oasis:names:specification:docbook:dtd:xml:4.1.2')
+
 
 if __name__ == '__main__':
-    main()
+    unittest.main()
