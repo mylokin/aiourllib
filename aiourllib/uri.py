@@ -1,11 +1,6 @@
-''' rfc 3986 implementation '''
 import string
-
-__all__ = [
-    'URI',
-    'URIFabric',
-    'URIException',
-]
+import ipaddress
+import unittest
 
 
 class URIException(Exception):
@@ -36,75 +31,87 @@ class QueryException(URIException):
     pass
 
 
-class PathSegmentException(URIException):
-    pass
-
-
-class RelSegmentException(URIException):
+class PathException(URIException):
     pass
 
 
 class Protocol(object):
-    LOWALPHA = string.ascii_lowercase
-    UPALPHA = string.ascii_uppercase
-    ALPHA = LOWALPHA + UPALPHA
-
+    ALPHA = string.ascii_letters
     DIGIT = string.digits
-    ALPHANUM = ALPHA + DIGIT
-
-    MARK = '-' '_' '.' '!' '~' '*' '\'' '(' ')'
-    UNRESERVED = ALPHANUM + '-' '.' '_' '~'
-
-    HEX = string.hexdigits
-    ESCAPED = '%' + HEX
+    UNRESERVED = ALPHA + DIGIT + '-' '.' '_' '~'
 
     GEN_DELIMS = ':' '/' '?' '#' '[' ']' '@'
     SUB_DELIMS = '!' '$' '&' '\'' '(' ')' '*' '+' ',' ';' '='
     RESERVED = GEN_DELIMS + SUB_DELIMS
 
-    URIC = RESERVED + UNRESERVED + ESCAPED
-    URIC_NO_SLASH = UNRESERVED + ESCAPED + ';' '?' ':' '@' '&' '=' '+' '$' ','
+    PCT_ENCODED = '%' + string.hexdigits
+    PCHAR = UNRESERVED + PCT_ENCODED + SUB_DELIMS + ':' + '@'
 
-    DELIMS = '<' '>' '#' '%' '"'
-    UNWISE = '{' '}' '|' '\\' '^' '`'
+    # Parts
+    SCHEME = ALPHA + DIGIT + '+' + '-' + '.'
+    QUERY = PCHAR + '/' '?'
+    FRAGMENT = PCHAR + '/' '?'
 
-    PCHAR = UNRESERVED + ESCAPED + ':' '@' '&' '=' '+' '$' ','
+    # Authority
+    USERINFO = UNRESERVED + PCT_ENCODED + SUB_DELIMS + ':'
+    PORT = DIGIT
 
-    SCHEME = ALPHANUM + '+' '-' '.'
-    USERINFO = (
-        UNRESERVED +
-        ESCAPED +
-        ';' ':' '&' '=' '+' '$' ',')
+    # Host
+    REG_NAME = UNRESERVED + PCT_ENCODED + SUB_DELIMS
 
-    TOPLABEL = ALPHANUM + '-'
-    SEGMENT = PCHAR + ';'
-    REL_SEGMENT = (
-        UNRESERVED +
-        ESCAPED +
-        ';' '@' '&' '=' '+' '$' ',')
+    # Path
+    SEGMENT = PCHAR
+    SEGMENT_NZ_NC = UNRESERVED + PCT_ENCODED + SUB_DELIMS + '@'
 
     @classmethod
-    def process_opaque_part(cls, scheme_specific_part):
-        if any(c not in cls.URIC for c in scheme_specific_part[1:]):
-            raise URIException(scheme_specific_part)
-        return scheme_specific_part
+    def strip_scheme(cls, uri):
+        if ':' not in uri:
+            return None, uri
+
+        scheme, hier_part = uri.split(':', 1)
+        if scheme[0] not in cls.ALPHA:
+            raise SchemeException(uri)
+
+        if any(c not in cls.SCHEME for c in scheme[1:]):
+            raise SchemeException(scheme)
+
+        return scheme.lower(), hier_part
 
     @classmethod
-    def process_net_path(cls, scheme_specific_part):
-        return scheme_specific_part[2:]
-
-    @classmethod
-    def process_authority(cls, scheme_specific_part):
-        if '/' in scheme_specific_part:
-            authority, scheme_specific_part = \
-                scheme_specific_part.split('/', 1)
+    def strip_fragment(cls, hier_part):
+        if '#' in hier_part:
+            hier_part, fragment = \
+                hier_part.rsplit('#', 1)
+            if any(c not in Protocol.FRAGMENT for c in fragment):
+                raise FragmentException(fragment)
         else:
-            authority = scheme_specific_part
-            scheme_specific_part = ''
-        return authority, scheme_specific_part
+            fragment = None
+        return fragment, hier_part
 
     @classmethod
-    def process_userinfo(cls, authority):
+    def strip_query(cls, hier_part):
+        if '?' in hier_part:
+            hier_part, query = hier_part.rsplit('?', 1)
+            if any(c not in Protocol.QUERY for c in query):
+                raise QueryException(query)
+        else:
+            query = None
+        return query, hier_part
+
+    @classmethod
+    def strip_authority(cls, hier_part):
+        if hier_part.startswith('//'):
+            hier_part = hier_part[2:]
+        if '/' in hier_part:
+            authority, hier_part = hier_part.split('/', 1)
+            hier_part = '/{}'.format(hier_part)
+        else:
+            authority = hier_part
+            hier_part = ''
+        return authority, hier_part
+
+    @classmethod
+    def strip_userinfo(cls, authority):
         if '@' in authority:
             userinfo, authority = authority.split('@', 1)
             if any(c not in cls.USERINFO for c in userinfo):
@@ -116,341 +123,266 @@ class Protocol(object):
         return userinfo, authority
 
     @classmethod
-    def process_rel_segment(cls, scheme_specific_part):
-        if not scheme_specific_part:
-            raise RelSegmentException(scheme_specific_part)
-
-        if '/' in scheme_specific_part:
-            rel_segment, scheme_specific_part = \
-                scheme_specific_part.split('/', 1)
+    def strip_port(cls, authority):
+        if ':' in authority:
+            authority, port = authority.rsplit(':', 1)
         else:
-            rel_segment = scheme_specific_part
-            scheme_specific_part = ''
-            return scheme_specific_part, ''
-
-        if not rel_segment:
-            raise RelSegmentException(rel_segment)
-
-        if any(c not in cls.REL_SEGMENT for c in rel_segment):
-            raise RelSegmentException(rel_segment)
-
-        return rel_segment, scheme_specific_part
-
-    @classmethod
-    def parse_host_port(cls, authority):
-        if authority.startswith('[') and authority.endswith(']'):
-            host = authority
-            port = None
-        elif ':' in authority:
-            host, port = authority.rsplit(':', 1)
-            if port.isdigit():
-                port = int(port)
-            else:
-                raise PortException(port)
+            return None, authority
+        if port.isdigit():
+            port = int(port)
         else:
-            host = authority
-            port = None
-        return host, port
+            raise PortException(port)
+        return port, authority
 
     @classmethod
-    def parse_ipv4_address(cls, host):
-        host = host.split('.')
-        ipv4 = all(n and n.isdigit() and int(n) <= 255 for n in host)
-        if len(host) == 4 and ipv4:
-            host = '.'.join(host)
+    def verify_reg_name(cls, host):
+        return all(c in cls.REG_NAME for c in host)
+
+    @classmethod
+    def verify_ipv4_address(cls, host):
+        if '.' not in host:
+            return False
+
+        try:
+            ipaddress.IPv4Address(host)
+        except ipaddress.AddressValueError:
+            return False
         else:
-            raise AuthorityException('.'.join(host))
-        return host
+            return True
 
     @classmethod
-    def parse_toplabel(cls, host):
-        host = host.split('.')
+    def verify_ipv6_address(cls, host):
+        if ':' not in host:
+            return False
 
-        toplabel = host[-1]
-        if toplabel.endswith('.'):
-            toplabel = toplabel[:-1]
-        if not toplabel:
-            raise AuthorityException('.'.join(host))
-        if not (toplabel[0] in Protocol.ALPHA):
-            raise AuthorityException(toplabel)
-        if not (toplabel[-1] in Protocol.ALPHANUM):
-            raise AuthorityException(toplabel)
-        if any(c not in cls.TOPLABEL for c in toplabel[1:-1]):
-            raise AuthorityException(toplabel)
-
-        return toplabel
-
-    @classmethod
-    def parse_domainlabels(cls, host):
-        host = host.split('.')
-
-        domainlabels = host[:-1]
-        for domainlabel in domainlabels:
-            if not domainlabel:
-                raise AuthorityException('.'.join(host))
-            if not (domainlabel[0] in Protocol.ALPHANUM):
-                raise AuthorityException(domainlabel)
-            if not (domainlabel[-1] in Protocol.ALPHANUM):
-                raise AuthorityException(domainlabel)
-            if any(c not in cls.TOPLABEL for c in domainlabel[1:-1]):
-                raise AuthorityException(domainlabel)
-
-        return domainlabels
-
-    @classmethod
-    def process_scheme(cls, uri):
-        if ':' not in uri:
-            return None, uri
-
-        scheme, scheme_specific_part = uri.split(':', 1)
-        if scheme[0] not in Protocol.ALPHA:
-            raise SchemeException(uri)
-
-        if any(c not in cls.SCHEME for c in scheme[1:]):
-            raise SchemeException(scheme)
-
-        return scheme.lower(), scheme_specific_part
-
-    @classmethod
-    def process_fragment(cls, scheme_specific_part):
-        if '#' in scheme_specific_part:
-            scheme_specific_part, fragment = \
-                scheme_specific_part.rsplit('#', 1)
-            if any(c not in Protocol.URIC for c in fragment):
-                raise FragmentException(fragment)
+        try:
+            ipaddress.IPv6Address(host)
+        except ipaddress.AddressValueError:
+            return False
         else:
-            fragment = None
-        return fragment, scheme_specific_part
+            return True
 
     @classmethod
-    def process_query(cls, scheme_specific_part):
-        if '?' in scheme_specific_part:
-            scheme_specific_part, query = scheme_specific_part.rsplit('?', 1)
-            if any(c not in Protocol.URIC for c in query):
-                raise QueryException(query)
-        else:
-            query = None
-        return query, scheme_specific_part
+    def verify_path_abempty(cls, path):
+        if not path:
+            return True
 
-    @classmethod
-    def parse_abs_path(cls, scheme_specific_part):
-        abs_path = scheme_specific_part or '/'
-        if not abs_path.startswith('/'):
-            abs_path = '/{}'.format(abs_path)
-        return abs_path
+        if not path.startswith('/'):
+            return False
 
-    @classmethod
-    def parse_segments(cls, abs_path):
-        segments = abs_path.strip('/').split('/')
+        segments = path.split('/')
         for segment in segments:
-            if not segment:
-                continue
-            if segment[0] not in Protocol.PCHAR:
-                raise PathSegmentException(segment)
             if any(c not in cls.SEGMENT for c in segment):
-                raise PathSegmentException(segment)
-        return segments
-
-    @classmethod
-    def parse_authority(cls, authority):
-        data = {}
-        data['userinfo'], authority = cls.process_userinfo(authority)
-        data['host'], data['port'] = cls.parse_host_port(authority)
-        return data
-
-    @classmethod
-    def provide_rel_path(cls, scheme_specific_part):
-        data = {}
-        data['rel_segment'], scheme_specific_part = \
-            cls.process_rel_segment(scheme_specific_part)
-
-        if scheme_specific_part:
-            data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
+                return False
         else:
-            data['abs_path'] = '/'
-        return data
+            return True
 
     @classmethod
-    def provide_net_path(cls, scheme_specific_part):
-        data = {}
-        scheme_specific_part = \
-            cls.process_net_path(scheme_specific_part)
-        data['authority'], scheme_specific_part = \
-            cls.process_authority(scheme_specific_part)
+    def verify_path_absolute(cls, path):
+        if not path.startswith('/'):
+            return False
 
-        data.update(cls.parse_authority(data['authority']))
+        segments = path.split('/')[1:]
+        segment = segments[0]
+        if not segment or any(c not in cls.SEGMENT for c in segment):
+            return False
 
-        if scheme_specific_part:
-            data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
+        for segment in segments[1:]:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
         else:
-            data['abs_path'] = '/'
-        return data
+            return True
 
     @classmethod
-    def provide_abs_path(cls, scheme_specific_part):
-        data = {}
-        if scheme_specific_part:
-            data['abs_path'] = cls.parse_abs_path(scheme_specific_part)
+    def verify_path_noscheme(cls, path):
+        if path.startswith('/'):
+            return False
+
+        segments = path.split('/')
+        segment = segments[0]
+        if not segment or any(c not in cls.SEGMENT_NZ_NC for c in segment):
+            return False
+
+        for segment in segments[1:]:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
         else:
-            data['abs_path'] = '/'
-        return data
+            return True
 
     @classmethod
-    def provide_opaque_part(cls, scheme_specific_part):
-        data = {}
-        data['opaque_part'] = cls.process_opaque_part(scheme_specific_part)
-        return data
+    def verify_path_rootless(cls, path):
+        if path.startswith('/'):
+            return False
 
+        segments = path.split('/')
+        segment = segments[0]
+        if not segment or any(c not in cls.SEGMENT for c in segment):
+            return False
 
-class URIFabric(object):
-    PROTOCOL = Protocol
-
-    FIELDS_NET_PATH = ('scheme', 'fragment', 'authority', 'abs_path', 'query')
-    FIELDS_ABS_PATH = ('scheme', 'fragment', 'abs_path', 'query')
-    FIELDS_REL_PATH = ('fragment', 'abs_path', 'rel_segment', 'query')
-    FIELDS_OPAQUE_PART = ('scheme', 'fragment', 'opaque_part')
-
-    @classmethod
-    def from_string(cls, source):
-        data = {}
-        data['scheme'], scheme_specific_part = \
-            cls.PROTOCOL.process_scheme(source)
-        data['fragment'], scheme_specific_part = \
-            cls.PROTOCOL.process_fragment(scheme_specific_part)
-        data['query'], scheme_specific_part = \
-            cls.PROTOCOL.process_query(scheme_specific_part)
-
-        if data['scheme']:
-            if scheme_specific_part.startswith('//'):
-                # hier_part(net_path)
-                data.update(
-                    cls.PROTOCOL.provide_net_path(scheme_specific_part))
-                fields = cls.FIELDS_NET_PATH
-            elif scheme_specific_part.startswith('/'):
-                # hier_part(abs_path)
-                data.update(
-                    cls.PROTOCOL.provide_abs_path(scheme_specific_part))
-                fields = cls.FIELDS_ABS_PATH
-            elif scheme_specific_part[0] in Protocol.URIC_NO_SLASH:
-                # opaque_part
-                data.update(
-                    cls.PROTOCOL.provide_opaque_part(scheme_specific_part))
-                fields = cls.FIELDS_OPAQUE_PART
-            else:
-                raise URIException(source)
+        for segment in segments[1:]:
+            if any(c not in cls.SEGMENT for c in segment):
+                return False
         else:
-            if scheme_specific_part.startswith('//'):
-                # net_path
-                data.update(
-                    cls.PROTOCOL.provide_net_path(scheme_specific_part))
-                fields = cls.FIELDS_NET_PATH
-            elif scheme_specific_part.startswith('/'):
-                # abs_path
-                data.update(
-                    cls.PROTOCOL.provide_abs_path(scheme_specific_part))
-                fields = cls.FIELDS_ABS_PATH
-            else:
-                # rel_path
-                data.update(
-                    cls.PROTOCOL.provide_rel_path(scheme_specific_part))
-                fields = cls.FIELDS_REL_PATH
+            return True
 
-        return URI(**{f: data[f] for f in fields})
+    @classmethod
+    def verify_path_empty(cls, path):
+        return bool(path)
 
 
 class URI(object):
-    __slots__ = [
-        'scheme',
-        'authority',
-        'abs_path',
-        'rel_segment',
-        'query',
-        'fragment',
-        'opaque_part',
-
-        'host',
-        'port',
-        'userinfo',
-        'ipv4_address',
-        'ipv6_address',
-        'hostport',
-        'hostname',
-        'toplabel',
-        'domainlabels',
-        'segments',
-    ]
-    PROTOCOL = Protocol
-
     def __init__(
         self,
         scheme=None,
         authority=None,
-        abs_path=None,
-        rel_segment=None,
+        path=None,
         query=None,
         fragment=None,
-        opaque_part=None,
     ):
         self.scheme = scheme
         self.authority = authority
-        self.abs_path = abs_path
-        self.rel_segment = rel_segment
+        self.path = path
         self.query = query
         self.fragment = fragment
-        self.opaque_part = opaque_part
-
-        self.host = None
-        self.port = None
-        self.userinfo = None
-
-        self.ipv4_address = None
-        self.ipv6_address = None
-
-        self.hostport = None
-        self.hostname = None
-
-        self.toplabel = None
-        self.domainlabels = None
-
-        self.segments = None
-        if self.abs_path:
-            self.PROTOCOL.parse_segments(self.abs_path)
-
-        if self.authority:
-            data = self.PROTOCOL.parse_authority(self.authority)
-            self.host = self.hostport = data['host']
-            self.port = data['port']
-            self.userinfo = data['userinfo']
-
-            if self.host.startswith('[') and self.host.endswith(']'):
-                # ipv6
-                raise NotImplementedError(self.host)
-            elif self.host.replace('.', '').isdigit():
-                self.ipv4_address = \
-                    self.PROTOCOL.parse_ipv4_address(self.host)
-            elif self.host:
-                self.hostname = self.host
-                self.toplabel = self.PROTOCOL.parse_toplabel(self.hostname)
-                self.domainlabels = \
-                    self.PROTOCOL.parse_domainlabels(self.hostname)
-
-            if self.port:
-                self.hostport = '{}:{}'.format(self.hostport, self.port)
 
     def __str__(self):
-        if self.scheme:
-            result = '{}://'.format(self.scheme)
-            if self.authority:
-                result = '{}{}'.format(result, self.authority)
-            result = '{}{}'.format(result, self.abs_path or self.opaque_part)
-            if self.query:
-                result = '{}?{}'.format(result, self.query)
-            if self.fragment:
-                result = '{}#{}'.format(result, self.fragment)
+        return to_string(self)
+
+
+def from_string(uri_reference):
+    uri = {'components': {}}
+    uri['scheme'], hier_part = Protocol.strip_scheme(uri_reference)
+    uri['fragment'], hier_part = Protocol.strip_fragment(hier_part)
+    uri['query'], hier_part = Protocol.strip_query(hier_part)
+    if uri['scheme']:
+        # hier_part
+        if hier_part.startswith('//'):
+            # authority
+            authority, hier_part = Protocol.strip_authority(hier_part)
+            uri['authority'] = authority
+            uri['components']['userinfo'], authority = \
+                Protocol.strip_userinfo(authority)
+            uri['components']['port'], authority = \
+                Protocol.strip_port(authority)
+            host = uri['components']['host'] = authority
+            if Protocol.verify_ipv6_address(host):
+                uri['components']['ipv6_address'] = host
+            elif Protocol.verify_ipv4_address(host):
+                uri['components']['ipv4_address'] = host
+            elif Protocol.verify_reg_name(host):
+                uri['components']['reg_name'] = host
+            else:
+                raise AuthorityException(host)
+
+            if Protocol.verify_path_abempty(hier_part):
+                uri['path'] = uri['components']['path_abempty'] = hier_part
+            else:
+                raise PathException(hier_part)
+
+        elif Protocol.verify_path_absolute(hier_part):
+            uri['path'] = uri['components']['path_absolute'] = hier_part
+        elif Protocol.verify_path_rootless(hier_part):
+            uri['path'] = uri['components']['path_rootless'] = hier_part
+        elif Protocol.verify_path_empty(hier_part):
+            uri['path'] = uri['components']['path_empty'] = hier_part
         else:
-            result = '{}{}'.format(self.rel_segment or '', self.abs_path)
-            if self.query:
-                result = '{}?{}'.format(result, self.query)
-            if self.fragment:
-                result = '{}#{}'.format(result, self.fragment)
-        return result
+            raise PathException(hier_part)
+
+    else:
+        # relative_ref
+        relative_ref = uri['components']['relative_ref'] = hier_part
+        if relative_ref.startswith('//'):
+            # authority
+            authority, relative_ref = Protocol.strip_authority(relative_ref)
+            uri['authority'] = authority
+            uri['components']['userinfo'], authority = \
+                Protocol.strip_userinfo(authority)
+            uri['components']['port'], authority = \
+                Protocol.strip_port(authority)
+            host = uri['components']['host'] = authority
+            if Protocol.verify_ipv6_address(host):
+                uri['components']['ipv6_address'] = host
+            elif Protocol.verify_ipv4_address(host):
+                uri['components']['ipv4_address'] = host
+            elif Protocol.verify_reg_name(host):
+                uri['components']['reg_name'] = host
+            else:
+                raise AuthorityException(host)
+
+            if Protocol.verify_path_abempty(relative_ref):
+                uri['path'] = uri['components']['path_abempty'] = relative_ref
+            else:
+                raise PathException(relative_ref)
+
+        elif Protocol.verify_path_absolute(relative_ref):
+            uri['path'] = uri['components']['path_absolute'] = relative_ref
+        elif Protocol.verify_path_noscheme(relative_ref):
+            uri['path'] = uri['components']['path_noscheme'] = relative_ref
+        elif Protocol.verify_path_empty(relative_ref):
+            uri['path'] = uri['components']['path_empty'] = relative_ref
+        else:
+            raise PathException(relative_ref)
+
+    return {c: uri[c] for c in uri if uri[c] is not None}
+
+
+def to_string(
+    scheme=None,
+    authority=None,
+    path=None,
+    query=None,
+    fragment=None,
+    components=None,
+):
+    # scheme authority path query fragment
+    uri_reference = ''
+    if scheme:
+        uri_reference = '{}:'.format(scheme)
+    if authority:
+        uri_reference = '{}//{}'.format(uri_reference, authority)
+    uri_reference = '{}{}'.format(uri_reference, path or '')
+    if query:
+        uri_reference = '{}?{}'.format(uri_reference, query)
+    if fragment:
+        uri_reference = '{}#{}'.format(uri_reference, fragment)
+    return uri_reference
+
+
+class TestURI(unittest.TestCase):
+    def assertMatch(self, uri_reference):
+        self.assertEqual(
+            to_string(**from_string(uri_reference)), uri_reference)
+
+    def test_ftp(self):
+        self.assertMatch('ftp://ftp.is.co.za/rfc/rfc1808.txt')
+
+    def test_http(self):
+        self.assertMatch('http://www.ietf.org/rfc/rfc2396.txt')
+
+    def test_http_query_fragment(self):
+        self.assertMatch('http://www.ietf.org/rfc/rfc2396.txt?a#b')
+
+    def test_mailto(self):
+        self.assertMatch('mailto:John.Doe@example.com')
+
+    def test_news(self):
+        self.assertMatch('news:comp.infosystems.www.servers.unix')
+
+    def test_tel(self):
+        self.assertMatch('tel:+1-816-555-1212')
+
+    def test_telnet(self):
+        self.assertMatch('telnet://192.0.2.16:80/')
+
+    def test_urn(self):
+        self.assertMatch('urn:oasis:names:specification:docbook:dtd:xml:4.1.2')
+
+    # def test_abs_path(self):
+    #     self.assertMatch('file:///rfc3986.txt')
+
+    # def test_rel_path(self):
+    #     self.assertMatch('file://./rfc3986.txt')
+
+
+if __name__ == '__main__':
+    unittest.main()

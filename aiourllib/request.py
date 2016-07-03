@@ -14,15 +14,15 @@ class Request(object):
 
     def __init__(self, method, url, headers=None):
         self.method = method
-        self.url = uri.URIFabric.from_string(url)
+        self.url = uri.from_string(url)
 
-        path = self.url.abs_path
-        if self.url.query:
-            path = '{}?{}'.format(path, self.url.query)
+        path = self.url['path']
+        if self.url.get('query'):
+            path = '{}?{}'.format(path, self.url['query'])
         self.path = path
 
         self.headers = collections.OrderedDict(headers or [])
-        self.headers['Host'] = self.url.hostport
+        self.headers['Host'] = self.url['authority']
 
     @property
     def line(self):
