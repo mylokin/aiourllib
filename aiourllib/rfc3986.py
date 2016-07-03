@@ -249,7 +249,7 @@ class URI(object):
 
 
 def from_string(uri_reference):
-    uri = {'extra': {}}
+    uri = {'components': {}}
     uri['scheme'], hier_part = Protocol.strip_scheme(uri_reference)
     uri['fragment'], hier_part = Protocol.strip_fragment(hier_part)
     uri['query'], hier_part = Protocol.strip_query(hier_part)
@@ -259,62 +259,62 @@ def from_string(uri_reference):
             # authority
             authority, hier_part = Protocol.strip_authority(hier_part)
             uri['authority'] = authority
-            uri['extra']['userinfo'], authority = Protocol.strip_userinfo(authority)
-            uri['extra']['port'], authority = Protocol.strip_port(authority)
-            host = uri['extra']['host'] = authority
+            uri['components']['userinfo'], authority = Protocol.strip_userinfo(authority)
+            uri['components']['port'], authority = Protocol.strip_port(authority)
+            host = uri['components']['host'] = authority
             if Protocol.verify_ipv6_address(host):
-                uri['extra']['ipv6_address'] = host
+                uri['components']['ipv6_address'] = host
             elif Protocol.verify_ipv4_address(host):
-                uri['extra']['ipv4_address'] = host
+                uri['components']['ipv4_address'] = host
             elif Protocol.verify_reg_name(host):
-                uri['extra']['reg_name'] = host
+                uri['components']['reg_name'] = host
             else:
                 raise AuthorityException(host)
 
             if Protocol.verify_path_abempty(hier_part):
-                uri['path'] = uri['extra']['path_abempty'] = hier_part
+                uri['path'] = uri['components']['path_abempty'] = hier_part
             else:
                 raise PathException(hier_part)
 
         elif Protocol.verify_path_absolute(hier_part):
-            uri['path'] = uri['extra']['path_absolute'] = hier_part
+            uri['path'] = uri['components']['path_absolute'] = hier_part
         elif Protocol.verify_path_rootless(hier_part):
-            uri['path'] = uri['extra']['path_rootless'] = hier_part
+            uri['path'] = uri['components']['path_rootless'] = hier_part
         elif Protocol.verify_path_empty(hier_part):
-            uri['path'] = uri['extra']['path_empty'] = hier_part
+            uri['path'] = uri['components']['path_empty'] = hier_part
         else:
             raise PathException(hier_part)
 
     else:
         # relative_ref
-        relative_ref = uri['extra']['relative_ref'] = hier_part
+        relative_ref = uri['components']['relative_ref'] = hier_part
         if relative_ref.startswith('//'):
             # authority
             authority, relative_ref = Protocol.strip_authority(relative_ref)
             uri['authority'] = authority
-            uri['extra']['userinfo'], authority = Protocol.strip_userinfo(authority)
-            uri['extra']['port'], authority = Protocol.strip_port(authority)
-            host = uri['extra']['host'] = authority
+            uri['components']['userinfo'], authority = Protocol.strip_userinfo(authority)
+            uri['components']['port'], authority = Protocol.strip_port(authority)
+            host = uri['components']['host'] = authority
             if Protocol.verify_ipv6_address(host):
-                uri['extra']['ipv6_address'] = host
+                uri['components']['ipv6_address'] = host
             elif Protocol.verify_ipv4_address(host):
-                uri['extra']['ipv4_address'] = host
+                uri['components']['ipv4_address'] = host
             elif Protocol.verify_reg_name(host):
-                uri['extra']['reg_name'] = host
+                uri['components']['reg_name'] = host
             else:
                 raise AuthorityException(host)
 
             if Protocol.verify_path_abempty(relative_ref):
-                uri['path'] = uri['extra']['path_abempty'] = relative_ref
+                uri['path'] = uri['components']['path_abempty'] = relative_ref
             else:
                 raise PathException(relative_ref)
 
         elif Protocol.verify_path_absolute(relative_ref):
-            uri['path'] = uri['extra']['path_absolute'] = relative_ref
+            uri['path'] = uri['components']['path_absolute'] = relative_ref
         elif Protocol.verify_path_noscheme(relative_ref):
-            uri['path'] = uri['extra']['path_noscheme'] = relative_ref
+            uri['path'] = uri['components']['path_noscheme'] = relative_ref
         elif Protocol.verify_path_empty(relative_ref):
-            uri['path'] = uri['extra']['path_empty'] = relative_ref
+            uri['path'] = uri['components']['path_empty'] = relative_ref
         else:
             raise PathException(relative_ref)
 
@@ -322,6 +322,7 @@ def from_string(uri_reference):
 
 
 def to_string(uri):
+    # scheme authority path query fragment
     pass
 
 
