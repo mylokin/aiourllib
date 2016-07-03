@@ -346,13 +346,17 @@ def to_string(
 
 class TestURI(unittest.TestCase):
     def assertMatch(self, uri_reference):
-        self.assertEqual(to_string(**from_string(uri_reference)), uri_reference)
+        self.assertEqual(
+            to_string(**from_string(uri_reference)), uri_reference)
 
     def test_ftp(self):
         self.assertMatch('ftp://ftp.is.co.za/rfc/rfc1808.txt')
 
     def test_http(self):
         self.assertMatch('http://www.ietf.org/rfc/rfc2396.txt')
+
+    def test_http_query_fragment(self):
+        self.assertMatch('http://www.ietf.org/rfc/rfc2396.txt?a#b')
 
     def test_mailto(self):
         self.assertMatch('mailto:John.Doe@example.com')
@@ -368,6 +372,12 @@ class TestURI(unittest.TestCase):
 
     def test_urn(self):
         self.assertMatch('urn:oasis:names:specification:docbook:dtd:xml:4.1.2')
+
+    # def test_abs_path(self):
+    #     self.assertMatch('file:///rfc3986.txt')
+
+    # def test_rel_path(self):
+    #     self.assertMatch('file://./rfc3986.txt')
 
 
 if __name__ == '__main__':
