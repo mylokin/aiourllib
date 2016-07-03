@@ -321,21 +321,43 @@ def from_string(uri_reference):
     return {c: uri[c] for c in uri if uri[c] is not None}
 
 
-def to_string(uri):
+def to_string(
+    scheme=None,
+    authority=None,
+    path=None,
+    query=None,
+    fragment=None,
+    components=None,
+):
     # scheme authority path query fragment
-    pass
+    uri_reference = ''
+    if scheme:
+        uri_reference = '{}:'.format(scheme)
+    if authority:
+        uri_reference = '{}//{}'.format(uri_reference, authority)
+    uri_reference = '{}{}'.format(uri_reference, path or '')
+    if query:
+        uri_reference = '{}?{}'.format(uri_reference, query)
+    if fragment:
+        uri_reference = '{}#{}'.format(uri_reference, fragment)
+    return uri_reference
 
 
 def main():
-    print(from_string('ftp://ftp.is.co.za/rfc/rfc1808.txt'))
-    print(from_string('http://www.ietf.org/rfc/rfc2396.txt'))
-    # print(from_string('ldap://[2001:db8::7]/c=GB?objectClass?one'))
-    print(from_string('mailto:John.Doe@example.com'))
-    print(from_string('news:comp.infosystems.www.servers.unix'))
-    print(from_string('tel:+1-816-555-1212'))
-    print(from_string('telnet://192.0.2.16:80/'))
-    print(from_string('urn:oasis:names:specification:docbook:dtd:xml:4.1.2'))
-
+    test = [
+        'ftp://ftp.is.co.za/rfc/rfc1808.txt',
+        'http://www.ietf.org/rfc/rfc2396.txt',
+        'mailto:John.Doe@example.com',
+        'news:comp.infosystems.www.servers.unix',
+        'tel:+1-816-555-1212',
+        'telnet://192.0.2.16:80/',
+        'urn:oasis:names:specification:docbook:dtd:xml:4.1.2',
+    ]
+    for uri_reference in test:
+        uri = from_string(uri_reference)
+        uri_reference_recomposition = to_string(**uri)
+        print(uri_reference, uri, uri_reference_recomposition)
+        assert uri_reference == uri_reference_recomposition
 
 if __name__ == '__main__':
     main()
