@@ -230,25 +230,6 @@ class Protocol(object):
         return bool(path)
 
 
-class URI(object):
-    def __init__(
-        self,
-        scheme=None,
-        authority=None,
-        path=None,
-        query=None,
-        fragment=None,
-    ):
-        self.scheme = scheme
-        self.authority = authority
-        self.path = path
-        self.query = query
-        self.fragment = fragment
-
-    def __str__(self):
-        return to_string(self)
-
-
 def from_string(uri_reference):
     uri = {'components': {}}
     uri['scheme'], hier_part = Protocol.strip_scheme(uri_reference)
