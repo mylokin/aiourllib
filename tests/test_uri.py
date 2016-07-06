@@ -31,9 +31,3 @@ class TestURI(unittest.TestCase):
 
     def test_urn(self):
         self.assertMatch('urn:oasis:names:specification:docbook:dtd:xml:4.1.2')
-
-    # def test_abs_path(self):
-    #     self.assertMatch('file:///rfc3986.txt')
-
-    # def test_rel_path(self):
-    #     self.assertMatch('file://./rfc3986.txt')
