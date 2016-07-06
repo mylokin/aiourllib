@@ -9,13 +9,13 @@ from .request import Request
 
 
 async def get(
-    url,
+    uri_reference,
     headers=None,
     connection_timeout=None,
     read_timeout=None,
     loop=None,
 ):
-    request = Request('get', url, headers=headers)
+    request = Request(Request.METHOD_GET, uri_reference, headers=headers)
     response = await request.connect(
         connection_timeout=connection_timeout,
         loop=loop,

@@ -1,20 +1,41 @@
 import asyncio
 import collections
+import functools
+import operator
 
 from . import (
     models,
     exc,
     uri,
-    rfc2161)
+    utils)
 from .response import Response
 
 
-class Protocol(object):
-    HTTP_VERSION = 1.1
-
-
 class Request(object):
-    PROTOCOL = Protocol
+    METHOD_GET = 'GET'
+    METHOD_OPTIONS = 'OPTIONS'
+    METHOD_HEAD = 'HEAD'
+    METHOD_POST = 'POST'
+    METHOD_PUT = 'PUT'
+    METHOD_DELETE = 'DELETE'
+    METHOD_TRACE = 'TRACE'
+    METHOD_CONNECT = 'CONNECT'
+
+    HTTP_VERSION = '1.1'
+
+    CRLF = '\r\n'
+    SP = ' '
+
+    REQUEST_LINE = '{method}{sp}{request_uri}{sp}HTTP/{http_version}{crlf}'
+
+    @classmethod
+    def request_line(cls, method, request_uri):
+        return cls.REQUEST_LINE.format(
+            method=method,
+            sp=cls.SP,
+            request_uri=request_uri,
+            http_version=cls.HTTP_VERSION,
+            crlf=cls.CRLF)
 
     def __init__(self, method, uri_reference, headers=None):
         self.method = method
@@ -33,10 +54,9 @@ class Request(object):
 
     @property
     def line(self):
-        return '{method} {path} HTTP/{http_version}'.format(
-            method=self.method.upper(),
-            path=self.path,
-            http_version=self.PROTOCOL.HTTP_VERSION)
+        return self.request_line(
+            self.method,
+            self.path).decode('utf-8')
 
     @property
     def header_fields(self):
@@ -44,11 +64,15 @@ class Request(object):
             '{}: {}'.format(h, v) for h, v in self.headers.items())
 
     def __str__(self):
+        request_line = self.request_line(
+            self.method,
+            self.path,
+        )
         return (
-            '{line}\r\n'
+            '{request_line}'
             '{header_fields}\r\n'
             '\r\n'.format(
-                line=self.line,
+                request_line=request_line,
                 header_fields=self.header_fields))
 
     async def connect(
