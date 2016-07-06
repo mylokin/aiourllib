@@ -21,13 +21,15 @@ class Request(object):
         self.uri_reference = uri_reference
         self.uri = uri.from_string(uri_reference)
 
+        self.headers = collections.OrderedDict(headers or [])
+        self.headers['Host'] = self.uri.authority
+
+    @property
+    def path(self):
         path = self.uri.path
         if self.uri.query:
             path = '{}?{}'.format(path, self.uri.query)
-        self.path = path
-
-        self.headers = collections.OrderedDict(headers or [])
-        self.headers['Host'] = self.uri.authority
+        return path
 
     @property
     def line(self):

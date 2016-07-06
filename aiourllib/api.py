@@ -15,10 +15,7 @@ async def get(
     read_timeout=None,
     loop=None,
 ):
-    request = Request(
-        'get',
-        url,
-        headers=headers)
+    request = Request('get', url, headers=headers)
     response = await request.connect(
         connection_timeout=connection_timeout,
         loop=loop,
