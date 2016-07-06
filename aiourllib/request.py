@@ -28,6 +28,14 @@ class Request(object):
 
     REQUEST_LINE = '{method}{sp}{request_uri}{sp}HTTP/{http_version}{crlf}'
 
+    def __init__(self, method, uri_reference, headers=None):
+        self.method = method
+        self.uri_reference = uri_reference
+        self.uri = uri.from_string(uri_reference)
+
+        self.headers = collections.OrderedDict(headers or [])
+        self.headers['Host'] = self.uri.authority
+
     @classmethod
     def request_line(cls, method, request_uri):
         return cls.REQUEST_LINE.format(
@@ -36,14 +44,6 @@ class Request(object):
             request_uri=request_uri,
             http_version=cls.HTTP_VERSION,
             crlf=cls.CRLF)
-
-    def __init__(self, method, uri_reference, headers=None):
-        self.method = method
-        self.uri_reference = uri_reference
-        self.uri = uri.from_string(uri_reference)
-
-        self.headers = collections.OrderedDict(headers or [])
-        self.headers['Host'] = self.uri.authority
 
     @property
     def path(self):
