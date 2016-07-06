@@ -22,6 +22,10 @@ class HttpbinTestCase(unittest.TestCase):
         with contextlib.closing(await request) as response:
             return await response.read_json()
 
+    def head(self, uri):
+        return self.loop.run_until_complete(
+            aiourllib.head(uri))
+
     def fetch(self, url):
         request = aiourllib.get(url)
         return self.loop.run_until_complete(
@@ -31,6 +35,10 @@ class HttpbinTestCase(unittest.TestCase):
         request = aiourllib.get(url, read_timeout=read_timeout)
         return self.loop.run_until_complete(
             self.read_json(request))
+
+    def test_ip_head(self):
+        response = self.head('https://httpbin.org/ip')
+        self.assertEqual(response.status_code, 200)
 
     def test_ip(self):
         self.fetch_json('https://httpbin.org/ip')
