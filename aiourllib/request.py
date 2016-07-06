@@ -6,6 +6,7 @@ from . import (
     exc,
     uri,
     rfc2161)
+from .response import Response
 
 
 class Protocol(object):
@@ -70,9 +71,9 @@ class Request(object):
             raise exc.ConnectionTimeout
         writer.write(str(self).encode('latin-1'))
         socket = models.Socket(reader=reader, writer=writer)
-        return models.Connection(
+        return Response(models.Connection(
             self.uri_reference,
             socket,
             connection_timeout,
             3.,
-        )
+        ))

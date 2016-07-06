@@ -212,17 +212,17 @@ class Response(object):
 
     def read(self):
         if self.transfer_encoding == 'chunked':
-            return self.read_chunks()
+            return self._read_chunks()
         elif self.transfer_encoding == 'deflate':
-            return self.read_deflate()
+            return self._read_deflate()
         elif self.transfer_encoding == 'gzip':
-            return self.read_gzip()
+            return self._read_gzip()
         elif self.transfer_encoding == 'identity':
-            return self.read_identity()
+            return self._read_identity()
         else:
             raise TransferEncodingException(self.transfer_encoding)
 
-    async def read_chunks(self):
+    async def _read_chunks(self):
         content = b''
         while True:
             coro = self.connection.socket.reader.readline()
@@ -243,13 +243,13 @@ class Response(object):
 
         return content
 
-    async def read_deflate(self):
+    async def _read_deflate(self):
         return zlib.decompress(await self.read_identity())
 
-    async def read_gzip(self):
+    async def _read_gzip(self):
         return gzip.decompress(await self.read_identity())
 
-    async def read_identity(self):
+    async def _read_identity(self):
         content = b''
         while len(content) < self.content_length:
             chunk_size = self.content_length - len(content)

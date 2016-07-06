@@ -8,12 +8,6 @@ from .response import Response
 from .request import Request
 
 
-async def read(connection):
-    response = Response(connection)
-    await response.read_headers()
-    return response
-
-
 async def get(
     url,
     headers=None,
@@ -25,5 +19,6 @@ async def get(
         'get',
         url,
         headers=headers)
-    conn = await request.connect()
-    return (await read(conn))
+    response = await request.connect()
+    await response.read_headers()
+    return response
