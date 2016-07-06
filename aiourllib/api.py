@@ -1,9 +1,9 @@
 import asyncio
-import urllib.parse
 
 from . import (
     exc,
-    models)
+    models,
+    uri)
 from .response import Response
 from .request import Request
 
@@ -20,14 +20,14 @@ async def connect(
     read_timeout=None,
     loop=None,
 ):
-    pr = urllib.parse.urlsplit(url)
-    if pr.scheme == 'https':
+    uri_reference = uri.from_string(url)
+    if uri_reference['scheme'] == 'https':
         port, ssl = 443, True
     else:
         port, ssl = 80, False
 
     conn = asyncio.open_connection(
-        pr.hostname,
+        uri_reference['authority'],
         port,
         ssl=ssl,
         loop=loop,
