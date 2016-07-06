@@ -66,7 +66,8 @@ class Request(object):
             loop=loop,
         )
         try:
-            reader, writer = await asyncio.wait_for(conn, connection_timeout)
+            reader, writer = await asyncio.wait_for(
+                conn, connection_timeout, loop=loop)
         except asyncio.TimeoutError:
             raise exc.ConnectionTimeout
         writer.write(str(self).encode('latin-1'))

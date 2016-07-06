@@ -19,6 +19,9 @@ async def get(
         'get',
         url,
         headers=headers)
-    response = await request.connect()
+    response = await request.connect(
+        connection_timeout=connection_timeout,
+        loop=loop,
+    )
     await response.read_headers()
     return response
