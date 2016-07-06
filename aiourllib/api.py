@@ -36,11 +36,12 @@ async def connect(
         reader, writer = await asyncio.wait_for(conn, connection_timeout)
     except asyncio.TimeoutError:
         raise exc.ConnectionTimeout
+    else:
+        socket = models.Socket(reader=reader, writer=writer)
 
     return models.Connection(
         url,
-        reader,
-        writer,
+        socket,
         connection_timeout,
         read_timeout,
     )
@@ -63,6 +64,6 @@ async def get(
         url,
         headers=headers)
     request = str(request).encode('latin-1')
-    conn.writer.write(request)
+    conn.socket.writer.write(request)
 
     return (await read(conn))
