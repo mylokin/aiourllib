@@ -1,5 +1,29 @@
+import collections
 import string
 import ipaddress
+
+URI = collections.namedtuple('URI', [
+    'scheme',
+    'authority',
+    'path',
+    'query',
+    'fragment',
+    'components',
+])
+
+URIComponents = collections.namedtuple('URIComponents', [
+    'userinfo',
+    'port',
+    'host',
+    'ipv6_address',
+    'ipv4_address',
+    'reg_name',
+    'path_abempty',
+    'path_absolute',
+    'path_rootless',
+    'path_empty',
+    'relative_ref',
+])
 
 
 class URIException(Exception):
@@ -230,7 +254,28 @@ class Protocol(object):
 
 
 def from_string(uri_reference):
-    uri = {'components': {}}
+    uri = {
+        'scheme': None,
+        'authority': None,
+        'path': None,
+        'query': None,
+        'fragment': None,
+        'components': None,
+    }
+    components = {
+        'userinfo': None,
+        'port': None,
+        'host': None,
+        'ipv6_address': None,
+        'ipv4_address': None,
+        'reg_name': None,
+        'path_abempty': None,
+        'path_absolute': None,
+        'path_rootless': None,
+        'path_empty': None,
+        'relative_ref': None,
+    }
+
     uri['scheme'], hier_part = Protocol.strip_scheme(uri_reference)
     uri['fragment'], hier_part = Protocol.strip_fragment(hier_part)
     uri['query'], hier_part = Protocol.strip_query(hier_part)
@@ -240,89 +285,83 @@ def from_string(uri_reference):
             # authority
             authority, hier_part = Protocol.strip_authority(hier_part)
             uri['authority'] = authority
-            uri['components']['userinfo'], authority = \
+            components['userinfo'], authority = \
                 Protocol.strip_userinfo(authority)
-            uri['components']['port'], authority = \
+            components['port'], authority = \
                 Protocol.strip_port(authority)
-            host = uri['components']['host'] = authority
+            host = components['host'] = authority
             if Protocol.verify_ipv6_address(host):
-                uri['components']['ipv6_address'] = host
+                components['ipv6_address'] = host
             elif Protocol.verify_ipv4_address(host):
-                uri['components']['ipv4_address'] = host
+                components['ipv4_address'] = host
             elif Protocol.verify_reg_name(host):
-                uri['components']['reg_name'] = host
+                components['reg_name'] = host
             else:
                 raise AuthorityException(host)
 
             if Protocol.verify_path_abempty(hier_part):
-                uri['path'] = uri['components']['path_abempty'] = hier_part
+                uri['path'] = components['path_abempty'] = hier_part
             else:
                 raise PathException(hier_part)
 
         elif Protocol.verify_path_absolute(hier_part):
-            uri['path'] = uri['components']['path_absolute'] = hier_part
+            uri['path'] = components['path_absolute'] = hier_part
         elif Protocol.verify_path_rootless(hier_part):
-            uri['path'] = uri['components']['path_rootless'] = hier_part
+            uri['path'] = components['path_rootless'] = hier_part
         elif Protocol.verify_path_empty(hier_part):
-            uri['path'] = uri['components']['path_empty'] = hier_part
+            uri['path'] = components['path_empty'] = hier_part
         else:
             raise PathException(hier_part)
 
     else:
         # relative_ref
-        relative_ref = uri['components']['relative_ref'] = hier_part
+        relative_ref = components['relative_ref'] = hier_part
         if relative_ref.startswith('//'):
             # authority
             authority, relative_ref = Protocol.strip_authority(relative_ref)
             uri['authority'] = authority
-            uri['components']['userinfo'], authority = \
+            components['userinfo'], authority = \
                 Protocol.strip_userinfo(authority)
-            uri['components']['port'], authority = \
+            components['port'], authority = \
                 Protocol.strip_port(authority)
-            host = uri['components']['host'] = authority
+            host = components['host'] = authority
             if Protocol.verify_ipv6_address(host):
-                uri['components']['ipv6_address'] = host
+                components['ipv6_address'] = host
             elif Protocol.verify_ipv4_address(host):
-                uri['components']['ipv4_address'] = host
+                components['ipv4_address'] = host
             elif Protocol.verify_reg_name(host):
-                uri['components']['reg_name'] = host
+                components['reg_name'] = host
             else:
                 raise AuthorityException(host)
 
             if Protocol.verify_path_abempty(relative_ref):
-                uri['path'] = uri['components']['path_abempty'] = relative_ref
+                uri['path'] = components['path_abempty'] = relative_ref
             else:
                 raise PathException(relative_ref)
 
         elif Protocol.verify_path_absolute(relative_ref):
-            uri['path'] = uri['components']['path_absolute'] = relative_ref
+            uri['path'] = components['path_absolute'] = relative_ref
         elif Protocol.verify_path_noscheme(relative_ref):
-            uri['path'] = uri['components']['path_noscheme'] = relative_ref
+            uri['path'] = components['path_noscheme'] = relative_ref
         elif Protocol.verify_path_empty(relative_ref):
-            uri['path'] = uri['components']['path_empty'] = relative_ref
+            uri['path'] = components['path_empty'] = relative_ref
         else:
             raise PathException(relative_ref)
+    components = URIComponents(**components)
+    uri['components'] = components
+    return URI(**uri)
 
-    return {c: uri[c] for c in uri if uri[c] is not None}
 
-
-def to_string(
-    scheme=None,
-    authority=None,
-    path=None,
-    query=None,
-    fragment=None,
-    components=None,
-):
+def to_string(uri):
     # scheme authority path query fragment
     uri_reference = ''
-    if scheme:
-        uri_reference = '{}:'.format(scheme)
-    if authority:
-        uri_reference = '{}//{}'.format(uri_reference, authority)
-    uri_reference = '{}{}'.format(uri_reference, path or '')
-    if query:
-        uri_reference = '{}?{}'.format(uri_reference, query)
-    if fragment:
-        uri_reference = '{}#{}'.format(uri_reference, fragment)
+    if uri.scheme:
+        uri_reference = '{}:'.format(uri.scheme)
+    if uri.authority:
+        uri_reference = '{}//{}'.format(uri_reference, uri.authority)
+    uri_reference = '{}{}'.format(uri_reference, uri.path or '')
+    if uri.query:
+        uri_reference = '{}?{}'.format(uri_reference, uri.query)
+    if uri.fragment:
+        uri_reference = '{}#{}'.format(uri_reference, uri.fragment)
     return uri_reference

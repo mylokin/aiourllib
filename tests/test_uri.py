@@ -6,7 +6,7 @@ from aiourllib import uri
 class TestURI(unittest.TestCase):
     def assertMatch(self, uri_reference):
         self.assertEqual(
-            uri.to_string(**uri.from_string(uri_reference)), uri_reference)
+            uri.to_string(uri.from_string(uri_reference)), uri_reference)
 
     def test_ftp(self):
         self.assertMatch('ftp://ftp.is.co.za/rfc/rfc1808.txt')
