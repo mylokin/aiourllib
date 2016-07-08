@@ -28,8 +28,10 @@ class Request(object):
 
     REQUEST_LINE = '{method}{sp}{request_uri}{sp}HTTP/{http_version}{crlf}'
 
-    def __init__(self, method, uri_reference, headers=None):
+    def __init__(self, method, uri_reference, data=None, headers=None):
         self.method = method
+        self.data = data
+
         self.uri_reference = uri_reference
         self.uri = uri.from_string(uri_reference)
 
@@ -104,3 +106,6 @@ class Request(object):
             connection_timeout,
             3.,
         ))
+
+    async def send(self):
+        pass
