@@ -4,8 +4,6 @@ from .api import (
     head,
     post,
 )
-from . import uri
-
 
 __version__ = '0.1.3'
-__all__ = ['get', 'head', 'post', 'exc', 'uri']
+__all__ = ['get', 'head', 'post', 'exc']
