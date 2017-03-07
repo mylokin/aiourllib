@@ -3,6 +3,45 @@ import re
 from . import utils
 
 
+class RequestProtocol(object):
+    METHOD_GET = 'GET'
+    METHOD_OPTIONS = 'OPTIONS'
+    METHOD_HEAD = 'HEAD'
+    METHOD_POST = 'POST'
+    METHOD_PUT = 'PUT'
+    METHOD_DELETE = 'DELETE'
+    METHOD_TRACE = 'TRACE'
+    METHOD_CONNECT = 'CONNECT'
+
+    HTTP_VERSION = '1.1'
+
+    CRLF = '\r\n'
+    SP = ' '
+
+    REQUEST_LINE = '{method}{sp}{request_uri}{sp}HTTP/{http_version}{crlf}'
+
+    @classmethod
+    def path(cls, uri):
+        path = uri.path
+        if uri.query:
+            path = '{}?{}'.format(path, uri.query)
+        return path
+
+    @classmethod
+    def header_fields(cls, headers):
+        return '\r\n'.join(
+            '{}: {}'.format(h, v) for h, v in headers.items())
+
+    @classmethod
+    def request_line(cls, method, request_uri):
+        return cls.REQUEST_LINE.format(
+            method=method,
+            sp=cls.SP,
+            request_uri=request_uri,
+            http_version=cls.HTTP_VERSION,
+            crlf=cls.CRLF)
+
+
 class ResponseProtocol(object):
     COLON = ':'
     HTTP = 'HTTP/'
