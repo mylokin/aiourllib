@@ -11,7 +11,7 @@ from . import (
 from .response import Response
 
 
-class Request(object):
+class RequestProtocol(object):
     METHOD_GET = 'GET'
     METHOD_OPTIONS = 'OPTIONS'
     METHOD_HEAD = 'HEAD'
@@ -28,15 +28,17 @@ class Request(object):
 
     REQUEST_LINE = '{method}{sp}{request_uri}{sp}HTTP/{http_version}{crlf}'
 
-    def __init__(self, method, uri_reference, data=None, headers=None):
-        self.method = method
-        self.data = data
+    @classmethod
+    def path(cls, uri):
+        path = uri.path
+        if uri.query:
+            path = '{}?{}'.format(path, uri.query)
+        return path
 
-        self.uri_reference = uri_reference
-        self.uri = uri.from_string(uri_reference)
-
-        self.headers = collections.OrderedDict(headers or [])
-        self.headers['Host'] = self.uri.authority
+    @classmethod
+    def header_fields(cls, headers):
+        return '\r\n'.join(
+            '{}: {}'.format(h, v) for h, v in headers.items())
 
     @classmethod
     def request_line(cls, method, request_uri):
@@ -47,35 +49,30 @@ class Request(object):
             http_version=cls.HTTP_VERSION,
             crlf=cls.CRLF)
 
-    @property
-    def path(self):
-        path = self.uri.path
-        if self.uri.query:
-            path = '{}?{}'.format(path, self.uri.query)
-        return path
 
-    @property
-    def line(self):
-        return self.request_line(
-            self.method,
-            self.path).decode('utf-8')
+class Request(object):
+    PROTOCOL = RequestProtocol
 
-    @property
-    def header_fields(self):
-        return '\r\n'.join(
-            '{}: {}'.format(h, v) for h, v in self.headers.items())
+    def __init__(self, method, uri_reference, data=None, headers=None):
+        self.method = method
+        self.data = data
+
+        self.uri_reference = uri_reference
+        self.uri = uri.from_string(uri_reference)
+
+        self.headers = collections.OrderedDict(headers or [])
+        self.headers['Host'] = self.uri.authority
 
     def __str__(self):
-        request_line = self.request_line(
+        request_line = self.PROTOCOL.request_line(
             self.method,
-            self.path,
-        )
+            self.PROTOCOL.path(self.uri))
         return (
             '{request_line}'
             '{header_fields}\r\n'
             '\r\n'.format(
                 request_line=request_line,
-                header_fields=self.header_fields))
+                header_fields=self.PROTOCOL.header_fields(self.headers)))
 
     async def connect(
         self,
@@ -106,6 +103,3 @@ class Request(object):
             connection_timeout,
             3.,
         ))
-
-    async def send(self):
-        pass
