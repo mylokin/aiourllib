@@ -10,18 +10,6 @@ from . import (
     utils)
 
 
-class ResponseException(Exception):
-    pass
-
-
-class TransferEncodingException(ResponseException):
-    pass
-
-
-class ContentEncodingException(ResponseException):
-    pass
-
-
 class Protocol(object):
     COLON = ':'
     HTTP = 'HTTP/'
@@ -220,7 +208,7 @@ class Response(object):
         elif self.transfer_encoding == 'identity':
             return self._read_identity()
         else:
-            raise TransferEncodingException(self.transfer_encoding)
+            raise exc.TransferEncodingException(self.transfer_encoding)
 
     async def _read_chunks(self):
         content = b''
@@ -273,7 +261,7 @@ class Response(object):
             elif self.content_encoding == 'identity':
                 pass
             else:
-                raise ContentEncodingException(self.content_encoding)
+                raise exc.ContentEncodingException(self.content_encoding)
             self._content = content
         return self._content
 
