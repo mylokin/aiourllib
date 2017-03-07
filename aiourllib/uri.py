@@ -7,38 +7,6 @@ from . import (
     models)
 
 
-class URIException(Exception):
-    pass
-
-
-class SchemeException(URIException):
-    pass
-
-
-class UserInfoException(URIException):
-    pass
-
-
-class PortException(URIException):
-    pass
-
-
-class AuthorityException(URIException):
-    pass
-
-
-class FragmentException(URIException):
-    pass
-
-
-class QueryException(URIException):
-    pass
-
-
-class PathException(URIException):
-    pass
-
-
 class Protocol(object):
     ALPHA = string.ascii_letters
     DIGIT = string.digits
@@ -74,10 +42,10 @@ class Protocol(object):
 
         scheme, hier_part = uri.split(':', 1)
         if scheme[0] not in cls.ALPHA:
-            raise SchemeException(uri)
+            raise exc.SchemeException(uri)
 
         if any(c not in cls.SCHEME for c in scheme[1:]):
-            raise SchemeException(scheme)
+            raise exc.SchemeException(scheme)
 
         return scheme.lower(), hier_part
 
@@ -87,7 +55,7 @@ class Protocol(object):
             hier_part, fragment = \
                 hier_part.rsplit('#', 1)
             if any(c not in Protocol.FRAGMENT for c in fragment):
-                raise FragmentException(fragment)
+                raise exc.FragmentException(fragment)
         else:
             fragment = None
         return fragment, hier_part
@@ -97,7 +65,7 @@ class Protocol(object):
         if '?' in hier_part:
             hier_part, query = hier_part.rsplit('?', 1)
             if any(c not in Protocol.QUERY for c in query):
-                raise QueryException(query)
+                raise exc.QueryException(query)
         else:
             query = None
         return query, hier_part
@@ -119,7 +87,7 @@ class Protocol(object):
         if '@' in authority:
             userinfo, authority = authority.split('@', 1)
             if any(c not in cls.USERINFO for c in userinfo):
-                raise UserInfoException(userinfo)
+                raise exc.UserInfoException(userinfo)
             if not userinfo:
                 userinfo = None
         else:
@@ -135,7 +103,7 @@ class Protocol(object):
         if port.isdigit():
             port = int(port)
         else:
-            raise PortException(port)
+            raise exc.PortException(port)
         return port, authority
 
     @classmethod
@@ -278,12 +246,12 @@ def from_string(uri_reference):
             elif Protocol.verify_reg_name(host):
                 components['reg_name'] = host
             else:
-                raise AuthorityException(host)
+                raise exc.AuthorityException(host)
 
             if Protocol.verify_path_abempty(hier_part):
                 uri['path'] = components['path_abempty'] = hier_part
             else:
-                raise PathException(hier_part)
+                raise exc.PathException(hier_part)
 
         elif Protocol.verify_path_absolute(hier_part):
             uri['path'] = components['path_absolute'] = hier_part
@@ -292,7 +260,7 @@ def from_string(uri_reference):
         elif Protocol.verify_path_empty(hier_part):
             uri['path'] = components['path_empty'] = hier_part
         else:
-            raise PathException(hier_part)
+            raise exc.PathException(hier_part)
 
     else:
         # relative_ref
@@ -313,12 +281,12 @@ def from_string(uri_reference):
             elif Protocol.verify_reg_name(host):
                 components['reg_name'] = host
             else:
-                raise AuthorityException(host)
+                raise exc.AuthorityException(host)
 
             if Protocol.verify_path_abempty(relative_ref):
                 uri['path'] = components['path_abempty'] = relative_ref
             else:
-                raise PathException(relative_ref)
+                raise exc.PathException(relative_ref)
 
         elif Protocol.verify_path_absolute(relative_ref):
             uri['path'] = components['path_absolute'] = relative_ref
@@ -327,7 +295,7 @@ def from_string(uri_reference):
         elif Protocol.verify_path_empty(relative_ref):
             uri['path'] = components['path_empty'] = relative_ref
         else:
-            raise PathException(relative_ref)
+            raise exc.PathException(relative_ref)
     components = models.URIComponents(**components)
     uri['components'] = components
     return models.URI(**uri)
