@@ -2,13 +2,13 @@ import collections
 
 Connection = collections.namedtuple('Connection', [
     'url',
-    'socket',
+    'socket_pair',
     'connection_timeout',
     'read_timeout',
 ])
 
 
-Socket = collections.namedtuple('Socket', [
+SocketPair = collections.namedtuple('SocketPair', [
     'reader',
     'writer',
 ])

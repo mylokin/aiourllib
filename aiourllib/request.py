@@ -99,10 +99,10 @@ class Request(object):
         except asyncio.TimeoutError:
             raise exc.ConnectionTimeout
         writer.write(str(self).encode('latin-1'))
-        socket = models.Socket(reader=reader, writer=writer)
+        socket_pair = models.SocketPair(reader=reader, writer=writer)
         return Response(models.Connection(
             self.uri_reference,
-            socket,
+            socket_pair,
             connection_timeout,
             3.,
         ))

@@ -186,7 +186,7 @@ class Response(object):
             raise exc.ReadTimeout
 
     async def read_headers(self):
-        coro = self.connection.socket.reader.readline()
+        coro = self.connection.socket_pair.reader.readline()
         status = (await self.read_coro(coro)).strip()
 
         status = utils.smart_text(status, 'latin-1')
@@ -194,7 +194,7 @@ class Response(object):
 
         self.headers = collections.OrderedDict()
         while True:
-            coro = self.connection.socket.reader.readline()
+            coro = self.connection.socket_pair.reader.readline()
             line = (await self.read_coro(coro)).strip()
             line = utils.smart_text(line, 'latin-1')
             if not line:
@@ -225,20 +225,20 @@ class Response(object):
     async def _read_chunks(self):
         content = b''
         while True:
-            coro = self.connection.socket.reader.readline()
+            coro = self.connection.socket_pair.reader.readline()
             chunk_size = await self.read_coro(coro)
             chunk_size = chunk_size.strip()
             if not chunk_size:
                 break
 
             chunk_size = int(chunk_size, base=16)
-            coro = self.connection.socket.reader.readexactly(chunk_size)
+            coro = self.connection.socket_pair.reader.readexactly(chunk_size)
             r = await self.read_coro(coro)
             if not r:
                 break
 
             content += r
-            coro = self.connection.socket.reader.readline()
+            coro = self.connection.socket_pair.reader.readline()
             await self.read_coro(coro)
 
         return content
@@ -254,7 +254,7 @@ class Response(object):
         while len(content) < self.content_length:
             chunk_size = self.content_length - len(content)
 
-            coro = self.connection.socket.reader.read(chunk_size)
+            coro = self.connection.socket_pair.reader.read(chunk_size)
             r = await self.read_coro(coro)
 
             if r:
@@ -286,4 +286,4 @@ class Response(object):
         return json.loads(content)
 
     def close(self):
-        self.connection.socket.writer.close()
+        self.connection.socket_pair.writer.close()
