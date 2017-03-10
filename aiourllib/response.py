@@ -101,23 +101,15 @@ class Response(object):
         header = header.lower()
         return header in mapping
 
-    async def read_coro(self, coro):
-        try:
-            return await asyncio.wait_for(coro, self.connection.read_timeout)
-        except asyncio.TimeoutError:
-            raise exc.ReadTimeout
-
     async def read_headers(self):
-        coro = self.connection.socket_pair.reader.readline()
-        status = (await self.read_coro(coro)).strip()
+        status = (await self.connection.readline()).strip()
 
         status = utils.smart_text(status, 'latin-1')
         self.status = self.PROTOCOL.parse_status(status)
 
         self.headers = collections.OrderedDict()
         while True:
-            coro = self.connection.socket_pair.reader.readline()
-            line = (await self.read_coro(coro)).strip()
+            line = (await self.connection.readline()).strip()
             line = utils.smart_text(line, 'latin-1')
             if not line:
                 break
@@ -147,21 +139,17 @@ class Response(object):
     async def _read_chunks(self):
         content = b''
         while True:
-            coro = self.connection.socket_pair.reader.readline()
-            chunk_size = await self.read_coro(coro)
-            chunk_size = chunk_size.strip()
+            chunk_size = (await self.connection.readline()).strip()
             if not chunk_size:
                 break
 
             chunk_size = int(chunk_size, base=16)
-            coro = self.connection.socket_pair.reader.readexactly(chunk_size)
-            r = await self.read_coro(coro)
+            r = await self.connection.readexactly(chunk_size)
             if not r:
                 break
 
             content += r
-            coro = self.connection.socket_pair.reader.readline()
-            await self.read_coro(coro)
+            await self.connection.readline()
 
         return content
 
@@ -176,8 +164,7 @@ class Response(object):
         while len(content) < self.content_length:
             chunk_size = self.content_length - len(content)
 
-            coro = self.connection.socket_pair.reader.read(chunk_size)
-            r = await self.read_coro(coro)
+            r = await self.connection.read(chunk_size)
 
             if r:
                 content += r
