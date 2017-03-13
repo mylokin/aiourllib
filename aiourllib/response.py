@@ -10,28 +10,7 @@ from . import (
     utils)
 
 
-class Response(object):
-    PROTOCOL = protocol.ResponseProtocol
-
-    CONTENT_TYPE = 'text/html'
-    CHARSET = 'UTF-8'
-
-    def __init__(self, connection):
-        self.connection = connection
-
-        self.status = None
-        self.headers = None
-
-        self._status_code = None
-        self._content_encoding = None
-        self._content_length = None
-        self._content_type = self.CONTENT_TYPE
-        self._charset = self.CHARSET
-        self._cache_control = None
-        self._transfer_encoding = None
-
-        self._content = None
-
+class AbstractResponse(object):
     @property
     def status_code(self):
         if not self._status_code:
@@ -84,6 +63,29 @@ class Response(object):
             self._cache_control = self.PROTOCOL.parse_cache_control(
                 self.get_header('Cache-Control'))
         return self._cache_control
+
+
+class Response(AbstractResponse):
+    PROTOCOL = protocol.ResponseProtocol
+
+    CONTENT_TYPE = 'text/html'
+    CHARSET = 'UTF-8'
+
+    def __init__(self, connection):
+        self.connection = connection
+
+        self.status = None
+        self.headers = None
+
+        self._status_code = None
+        self._content_encoding = None
+        self._content_length = None
+        self._content_type = self.CONTENT_TYPE
+        self._charset = self.CHARSET
+        self._cache_control = None
+        self._transfer_encoding = None
+
+        self._content = None
 
     def get_header(self, header):
         mapping = {h.lower(): h for h in self.headers}
