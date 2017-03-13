@@ -16,16 +16,11 @@ class Response(object):
     CONTENT_TYPE = 'text/html'
     CHARSET = 'UTF-8'
 
-    def __init__(
-        self,
-        connection,
-        status=None,
-        headers=None,
-    ):
+    def __init__(self, connection):
         self.connection = connection
 
-        self.status = status
-        self.headers = headers
+        self.status = None
+        self.headers = None
 
         self._status_code = None
         self._content_encoding = None
