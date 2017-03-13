@@ -53,9 +53,6 @@ class Request(object):
         await connection.connect(self.uri.authority, port, request_line, ssl)
 
         response = Response(connection)
-        await asyncio.wait_for(
-            response.read_headers(),
-            read_timeout,
-            loop=loop)
+        await response.read_headers()
 
         return response
