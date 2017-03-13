@@ -1,5 +1,7 @@
 import asyncio
 import collections
+import gzip
+import zlib
 
 from . import exc
 
@@ -29,6 +31,42 @@ class Connection(object):
     async def readline(self):
         coro = self.socket_pair.reader.readline()
         return (await self.read_coro(coro))
+
+    async def read_chunks(self):
+        content = b''
+        while True:
+            chunk_size = (await self.readline()).strip()
+            if not chunk_size:
+                break
+
+            chunk_size = int(chunk_size, base=16)
+            r = await self.readexactly(chunk_size)
+            if not r:
+                break
+
+            content += r
+            await self.readline()
+
+        return content
+
+    async def read_identity(self, content_length):
+        content = b''
+        while len(content) < content_length:
+            chunk_size = content_length - len(content)
+
+            r = await self.read(chunk_size)
+
+            if r:
+                content += r
+            else:
+                break
+        return content
+
+    async def read_deflate(self, content_length):
+        return zlib.decompress(await self.read_identity(content_length))
+
+    async def read_gzip(self, content_length):
+        return gzip.decompress(await self.read_identity(content_length))
 
     async def connect(self, authority, port, request_line, ssl=False):
         conn = asyncio.open_connection(

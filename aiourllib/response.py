@@ -121,51 +121,15 @@ class Response(object):
 
     def read(self):
         if self.transfer_encoding == 'chunked':
-            return self._read_chunks()
+            return self.connection.read_chunks()
         elif self.transfer_encoding == 'deflate':
-            return self._read_deflate()
+            return self.connection.read_deflate(self.content_length)
         elif self.transfer_encoding == 'gzip':
-            return self._read_gzip()
+            return self.connection.read_gzip(self.content_length)
         elif self.transfer_encoding == 'identity':
-            return self._read_identity()
+            return self.connection.read_identity(self.content_length)
         else:
             raise exc.TransferEncodingException(self.transfer_encoding)
-
-    async def _read_chunks(self):
-        content = b''
-        while True:
-            chunk_size = (await self.connection.readline()).strip()
-            if not chunk_size:
-                break
-
-            chunk_size = int(chunk_size, base=16)
-            r = await self.connection.readexactly(chunk_size)
-            if not r:
-                break
-
-            content += r
-            await self.connection.readline()
-
-        return content
-
-    async def _read_deflate(self):
-        return zlib.decompress(await self.read_identity())
-
-    async def _read_gzip(self):
-        return gzip.decompress(await self.read_identity())
-
-    async def _read_identity(self):
-        content = b''
-        while len(content) < self.content_length:
-            chunk_size = self.content_length - len(content)
-
-            r = await self.connection.read(chunk_size)
-
-            if r:
-                content += r
-            else:
-                break
-        return content
 
     async def read_content(self):
         if not self._content:
