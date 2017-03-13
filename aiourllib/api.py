@@ -21,9 +21,9 @@ async def get(
         headers=headers)
     response = await request.connect(
         connection_timeout=connection_timeout,
+        read_timeout=read_timeout,
         loop=loop,
     )
-    await response.read_headers()
     return response
 
 
@@ -40,12 +40,9 @@ async def head(
         headers=headers)
     response = await request.connect(
         connection_timeout=connection_timeout,
+        read_timeout=read_timeout,
         loop=loop,
     )
-    await asyncio.wait_for(
-        response.read_headers(),
-        read_timeout,
-        loop=loop)
     return response
 
 
@@ -65,11 +62,8 @@ async def post(
     )
     response = await request.connect(
         connection_timeout=connection_timeout,
+        read_timeout=read_timeout,
         loop=loop,
     )
 
-    await asyncio.wait_for(
-        response.read_headers(),
-        read_timeout,
-        loop=loop)
     return response

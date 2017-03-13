@@ -5,11 +5,12 @@ from . import exc
 
 
 class Connection(object):
-    def __init__(self, url, socket_pair, connection_timeout, read_timeout):
-        self.url = url
-        self.socket_pair = socket_pair
+    def __init__(self, connection_timeout, read_timeout, loop=None):
         self.connection_timeout = connection_timeout
         self.read_timeout = read_timeout
+        self.loop = loop
+
+        self.socket_pair = None
 
     async def read_coro(self, coro):
         try:
@@ -28,6 +29,22 @@ class Connection(object):
     async def readline(self):
         coro = self.socket_pair.reader.readline()
         return (await self.read_coro(coro))
+
+    async def connect(self, authority, port, request_line, ssl=False):
+        conn = asyncio.open_connection(
+            authority,
+            port,
+            ssl=ssl,
+            loop=self.loop)
+
+        try:
+            reader, writer = await asyncio.wait_for(
+                conn, self.connection_timeout, loop=self.loop)
+        except asyncio.TimeoutError:
+            raise exc.ConnectionTimeout
+        writer.write(request_line)
+
+        self.socket_pair = SocketPair(reader=reader, writer=writer)
 
 
 SocketPair = collections.namedtuple('SocketPair', [

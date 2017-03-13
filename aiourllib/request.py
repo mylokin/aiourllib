@@ -39,29 +39,23 @@ class Request(object):
     async def connect(
         self,
         connection_timeout=None,
+        read_timeout=None,
         loop=None,
     ):
         if self.uri.scheme == 'https':
             port, ssl = 443, True
         else:
             port, ssl = 80, False
+        request_line = str(self).encode('latin-1')
 
-        conn = asyncio.open_connection(
-            self.uri.authority,
-            port,
-            ssl=ssl,
-            loop=loop,
-        )
-        try:
-            reader, writer = await asyncio.wait_for(
-                conn, connection_timeout, loop=loop)
-        except asyncio.TimeoutError:
-            raise exc.ConnectionTimeout
-        writer.write(str(self).encode('latin-1'))
-        socket_pair = models.SocketPair(reader=reader, writer=writer)
-        return Response(models.Connection(
-            self.uri_reference,
-            socket_pair,
-            connection_timeout,
-            3.,
-        ))
+        connection = models.Connection(
+            connection_timeout, read_timeout, loop=loop)
+        await connection.connect(self.uri.authority, port, request_line, ssl)
+
+        response = Response(connection)
+        await asyncio.wait_for(
+            response.read_headers(),
+            read_timeout,
+            loop=loop)
+
+        return response
