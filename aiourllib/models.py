@@ -68,7 +68,7 @@ class Connection(object):
     async def read_gzip(self, content_length):
         return gzip.decompress(await self.read_identity(content_length))
 
-    async def connect(self, authority, port, request_line, ssl=False):
+    async def connect(self, authority, port, ssl=False):
         conn = asyncio.open_connection(
             authority,
             port,
@@ -80,9 +80,9 @@ class Connection(object):
                 conn, self.connection_timeout, loop=self.loop)
         except asyncio.TimeoutError:
             raise exc.ConnectionTimeout
-        writer.write(request_line)
 
         self.socket_pair = SocketPair(reader=reader, writer=writer)
+        return self.socket_pair
 
 
 SocketPair = collections.namedtuple('SocketPair', [

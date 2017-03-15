@@ -46,11 +46,14 @@ class Request(object):
             port, ssl = 443, True
         else:
             port, ssl = 80, False
-        request_line = str(self).encode('latin-1')
 
         connection = models.Connection(
             connection_timeout, read_timeout, loop=loop)
-        await connection.connect(self.uri.authority, port, request_line, ssl)
+
+        socket_pair = await connection.connect(self.uri.authority, port, ssl)
+
+        request_line = str(self).encode('latin-1')
+        socket_pair.writer.write(request_line)
 
         response = Response(connection)
         await response.read_headers()
