@@ -15,16 +15,15 @@ async def get(
     read_timeout=None,
     loop=None,
 ):
-    request = Request(
+    return await Request(
         Request.PROTOCOL.METHOD_GET,
         uri_reference,
-        headers=headers)
-    response = await request.connect(
+        headers=headers,
+    ).connect(
         connection_timeout=connection_timeout,
         read_timeout=read_timeout,
         loop=loop,
     )
-    return response
 
 
 async def head(
@@ -34,16 +33,15 @@ async def head(
     read_timeout=None,
     loop=None,
 ):
-    request = Request(
+    return await Request(
         Request.PROTOCOL.METHOD_HEAD,
         uri_reference,
-        headers=headers)
-    response = await request.connect(
+        headers=headers,
+    ).connect(
         connection_timeout=connection_timeout,
         read_timeout=read_timeout,
         loop=loop,
     )
-    return response
 
 
 async def post(
@@ -54,16 +52,13 @@ async def post(
     read_timeout=None,
     loop=None,
 ):
-    request = Request(
+    return await Request(
         Request.PROTOCOL.METHOD_POST,
         uri_reference,
         data=data,
         headers=headers,
-    )
-    response = await request.connect(
+    ).connect(
         connection_timeout=connection_timeout,
         read_timeout=read_timeout,
         loop=loop,
     )
-
-    return response
