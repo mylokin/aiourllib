@@ -83,3 +83,17 @@ class HttpbinHeadTestCase(TestCase):
     def test_ip(self):
         response = self.head('https://httpbin.org/ip')
         self.assertEqual(response.status_code, 200)
+
+
+class HttpbinPostTestCase(TestCase):
+    async def read(self, request):
+        with contextlib.closing(await request) as response:
+            return await response.read_json()
+
+    def post(self, uri, data):
+        request = aiourllib.post(uri, data)
+        return self.loop.run_until_complete(self.read(request))
+
+    def test_post(self):
+        response = self.post('https://httpbin.org/post', 'data')
+        self.assertEqual(response['form'], {'data': ''})

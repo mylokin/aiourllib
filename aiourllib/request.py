@@ -15,15 +15,26 @@ from .response import Response
 class Request(object):
     PROTOCOL = protocol.RequestProtocol
 
-    def __init__(self, method, uri_reference, data=None, headers=None):
+    def __init__(
+        self,
+        method,
+        uri_reference,
+        data=None,
+        data_encoding='utf-8',
+        headers=None,
+    ):
         self.method = method
-        self.data = data
+        self.data = data and str(data).encode(data_encoding)
 
         self.uri_reference = uri_reference
         self.uri = uri.from_string(uri_reference)
 
         self.headers = collections.OrderedDict(headers or [])
         self.headers['Host'] = self.uri.authority
+
+        if self.data:
+            self.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+            self.headers['Content-Length'] = len(data)
 
     def __str__(self):
         request_line = self.PROTOCOL.request_line(
@@ -54,6 +65,13 @@ class Request(object):
 
         request_line = str(self).encode('latin-1')
         socket_pair.writer.write(request_line)
+
+        if self.data:
+            socket_pair.writer.write(self.data)
+            socket_pair.writer.write(b'\r\n')
+
+        if socket_pair.writer.can_write_eof():
+            socket_pair.writer.write_eof()
 
         response = Response(connection)
         await response.read_headers()
